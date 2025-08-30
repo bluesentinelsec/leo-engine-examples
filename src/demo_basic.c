@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-bool RunDemo_Basic(bool one_frame)
+bool BasicDemo(bool one_frame)
 {
     if (!leo_InitWindow(1280, 720, "Basic Demo"))
     {

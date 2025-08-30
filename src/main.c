@@ -90,30 +90,30 @@ int main(int argc, char *argv[]) {
 
   if (list_demos) {
     printf("Available demos:\n");
-    for (int i = 0; i < g_num_demos; i++) {
-      printf("  %d: %s — %s\n", i, g_demos[i].name, g_demos[i].description);
+    for (int i = 0; i < gNumDemos; i++) {
+      printf("  %d: %s — %s\n", i, gDemos[i].name, gDemos[i].description);
     }
     return 0;
   }
 
   if (run_all) {
     printf("Running all demos%s...\n", cicd_mode ? " in CI/CD mode" : "");
-    for (int i = 0; i < g_num_demos; i++) {
-      printf("\n[%d] %s\n", i, g_demos[i].name);
-      g_demos[i].run(cicd_mode);
+    for (int i = 0; i < gNumDemos; i++) {
+      printf("\n[%d] %s\n", i, gDemos[i].name);
+      gDemos[i].run(cicd_mode);
     }
     return 0;
   }
 
   if (selected_index >= 0) {
-    if (selected_index < 0 || selected_index >= g_num_demos) {
+    if (selected_index < 0 || selected_index >= gNumDemos) {
       fprintf(stderr, "Invalid demo index: %d (must be between 0 and %d).\n",
-              selected_index, g_num_demos - 1);
+              selected_index, gNumDemos - 1);
       return 1;
     }
     printf("Running demo %d: %s\n", selected_index,
-           g_demos[selected_index].name);
-    g_demos[selected_index].run(cicd_mode);
+           gDemos[selected_index].name);
+    gDemos[selected_index].run(cicd_mode);
     return 0;
   }
 

@@ -29,6 +29,7 @@ set(SOURCE_FILES
     src/demos.c
     src/demos.h
     src/demo_basic.c
+    src/core/resizable_window.c
     external/getopt/getopt.c
     external/getopt/getopt.h
 )

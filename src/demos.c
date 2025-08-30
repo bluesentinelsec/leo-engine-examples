@@ -1,11 +1,17 @@
 #include "demos.h"
 
-/* Forward declare your demo entrypoints */
-bool RunDemo_Basic(bool one_frame);
+// Forward declare your demo entrypoints
+// Note that 'oneFrame' means the demo
+// will run for 1 frame then exit.
+// This is intended to provide an escape
+// hatch so we can test the demos in CICD
+bool BasicDemo(bool oneFrame);
+bool ResizableDemo(bool oneFrame);
 
 /* Register demos here */
-Demo g_demos[] = {
-    {"Basic Demo", "Trivial print-only demo", RunDemo_Basic},
+Demo gDemos[] = {
+    {"Basic Demo", "Trivial print-only demo", BasicDemo},
+    {"Resizable Window", "How to create a resizable window", ResizableDemo},
 };
 
-int g_num_demos = sizeof(g_demos) / sizeof(g_demos[0]);
+int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);
