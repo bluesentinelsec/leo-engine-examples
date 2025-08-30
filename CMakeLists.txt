@@ -26,11 +26,14 @@ FetchContent_MakeAvailable(leo)
 
 set(SOURCE_FILES 
     src/main.c
+    src/demos.c
+    src/demos.h
+    src/demo_basic.c
     external/getopt/getopt.c
     external/getopt/getopt.h
 )
 
-add_executable(${PROJECT_NAME} src/main.c)
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE Leo::Runtime)
 
 if(LEO_BUILD_SHARED)
