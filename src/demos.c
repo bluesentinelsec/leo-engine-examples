@@ -7,11 +7,13 @@
 // hatch so we can test the demos in CICD
 bool BasicDemo(bool oneFrame);
 bool ResizableDemo(bool oneFrame);
+bool FullscreenDemo(bool oneFrame);
 
 /* Register demos here */
 Demo gDemos[] = {
     {"Basic Demo", "Trivial print-only demo", BasicDemo},
     {"Resizable Window", "How to create a resizable window", ResizableDemo},
+    {"Fullscreen Window", "How to create a fullscreen window", FullscreenDemo},
 };
 
 int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);
