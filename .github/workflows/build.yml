@@ -1,0 +1,91 @@
+name: Build & Run Leo Engine Showcase
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS (arm64, clang, Release)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DLEO_BUILD_SHARED=ON
+          -DLEO_BUILD_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run Showcase
+        run: ./build/leo-engine-showcase --all --cicd
+
+  windows-msvc:
+    name: Windows (x64, MSVC, Release)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        shell: pwsh
+        run: >
+          cmake -S . -B build
+          -G "Visual Studio 17 2022" -A x64
+          -DCMAKE_BUILD_TYPE=Release
+          -DLEO_BUILD_SHARED=ON
+          -DLEO_BUILD_TESTS=OFF
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --parallel
+
+      - name: Run Showcase
+        shell: pwsh
+        run: .\build\Release\leo-engine-showcase.exe --all --cicd
+
+  debian12-gcc:
+    name: Debian 12 (x64, gcc, Release)
+    runs-on: ubuntu-latest
+    container:
+      image: debian:12
+    steps:
+      - name: Install toolchain
+        run: |
+          set -eux
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config git ca-certificates libsdl2-dev xvfb xauth
+          update-ca-certificates
+
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        env:
+          CC: gcc
+          CXX: g++
+        run: >
+          cmake -S . -B build
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DLEO_BUILD_SHARED=ON
+          -DLEO_BUILD_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run Showcase (headless via Xvfb)
+        run: |
+          xvfb-run -a -s "-screen 0 1280x720x24" \
+            ./build/leo-engine-showcase --all --cicd
+
