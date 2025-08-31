@@ -18,17 +18,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # =========================
 # Runtime search paths
 # =========================
-# Prefer libraries next to the executable at runtime
+# Search current dir first, then lib/
+if(APPLE)
+  set(_RPATH_LIST "@loader_path" "@loader_path/lib")
+else()
+  set(_RPATH_LIST "\$ORIGIN" "\$ORIGIN/lib")
+endif()
+
 set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
-# Keep $ORIGIN at build/install time (escape $ for CMake)
-set(CMAKE_BUILD_RPATH "\$ORIGIN")
-set(CMAKE_INSTALL_RPATH "\$ORIGIN")
+set(CMAKE_BUILD_RPATH "${_RPATH_LIST}")
+set(CMAKE_INSTALL_RPATH "${_RPATH_LIST}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
 # =========================
 # Options (tweakable)
 # =========================
-# Where resources come from; .leopack takes priority over the folder.
 set(LEO_RESOURCES_DIR "resources" CACHE STRING "Path to resources directory (fallback if no .leopack)")
 set(LEO_RESOURCES_PACK "resources.leopack" CACHE STRING "Path to .leopack file if available")
 
@@ -65,8 +69,8 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE Leo::Runtime)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    BUILD_RPATH "\$ORIGIN"
-    INSTALL_RPATH "\$ORIGIN"
+    BUILD_RPATH "${_RPATH_LIST}"
+    INSTALL_RPATH "${_RPATH_LIST}"
     BUILD_WITH_INSTALL_RPATH TRUE
 )
 
@@ -119,7 +123,7 @@ file(WRITE "${_SONAME_SCRIPT}" [=[
 # =========================
 # Destinations
 # =========================
-# 1) Runtime dir (where the exe is) — we also populate this so running from build works
+# 1) Runtime dir (where the exe is)
 set(RUNTIME_DIR "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
 # 2) Package directory (always produced)
@@ -131,27 +135,27 @@ else()
     set(PACKAGE_DIR "${PROJECT_NAME}.Windows.$<CONFIG>")
 endif()
 set(PACKAGE_ABS_DIR "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_DIR}")
+set(PACKAGE_LIB_DIR "${PACKAGE_ABS_DIR}/lib")
 
 # =========================
 # Always-on: populate the RUNTIME (build) directory
+#  - Copy libs to the BUILD ROOT (next to exe) + SONAME links there
 # =========================
 if(LEO_BUILD_SHARED)
     if(WIN32)
+        # NOTE: Windows won't search lib/ automatically; this keeps DLLs next to the exe.
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${RUNTIME_DIR}"
-            # libs next to exe
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>
                 "${RUNTIME_DIR}"
             COMMAND_EXPAND_LISTS
-            # resources
             COMMAND ${CMAKE_COMMAND}
                 -D INPUT_PACK="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}"
                 -D INPUT_DIR="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}"
                 -D DEST_DIR="${RUNTIME_DIR}"
                 -D RES_DIR_NAME="${LEO_RESOURCES_DIR}"
                 -P "${_PACK_SCRIPT}"
-            # docs
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/LICENSE" "${RUNTIME_DIR}/LICENSE"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -161,19 +165,18 @@ if(LEO_BUILD_SHARED)
     elseif(APPLE)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${RUNTIME_DIR}"
-            # dylibs next to exe
+            # dylibs next to the exe
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:Leo::Runtime>
                 $<TARGET_FILE:SDL3::SDL3>
                 "${RUNTIME_DIR}"
-            # resources
+            # resources + docs to root
             COMMAND ${CMAKE_COMMAND}
                 -D INPUT_PACK="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}"
                 -D INPUT_DIR="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}"
                 -D DEST_DIR="${RUNTIME_DIR}"
                 -D RES_DIR_NAME="${LEO_RESOURCES_DIR}"
                 -P "${_PACK_SCRIPT}"
-            # docs
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/LICENSE" "${RUNTIME_DIR}/LICENSE"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -183,12 +186,12 @@ if(LEO_BUILD_SHARED)
     elseif(UNIX AND NOT APPLE) # Linux
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${RUNTIME_DIR}"
-            # so files next to exe
+            # .so files next to the exe
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:Leo::Runtime>
                 $<TARGET_FILE:SDL3::SDL3>
                 "${RUNTIME_DIR}"
-            # SONAME symlinks in runtime dir
+            # SONAME symlinks in the build root
             COMMAND ${CMAKE_COMMAND}
                 -D LIB_ABS="$<TARGET_FILE:Leo::Runtime>"
                 -D DEST_DIR="${RUNTIME_DIR}"
@@ -199,14 +202,13 @@ if(LEO_BUILD_SHARED)
                 -D DEST_DIR="${RUNTIME_DIR}"
                 -D SONAME="$<TARGET_SONAME_FILE_NAME:SDL3::SDL3>"
                 -P "${_SONAME_SCRIPT}"
-            # resources
+            # resources + docs to root
             COMMAND ${CMAKE_COMMAND}
                 -D INPUT_PACK="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}"
                 -D INPUT_DIR="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}"
                 -D DEST_DIR="${RUNTIME_DIR}"
                 -D RES_DIR_NAME="${LEO_RESOURCES_DIR}"
                 -P "${_PACK_SCRIPT}"
-            # docs
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/LICENSE" "${RUNTIME_DIR}/LICENSE"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -216,7 +218,7 @@ if(LEO_BUILD_SHARED)
         )
     endif()
 else()
-    # Static build: still drop resources + docs into runtime dir
+    # Static build: still drop resources + docs into runtime dir root
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RUNTIME_DIR}"
         COMMAND ${CMAKE_COMMAND}
@@ -234,102 +236,117 @@ else()
 endif()
 
 # =========================
-# Always-on: assemble the PACKAGE directory (additive)
+# Always-on: assemble the PACKAGE directory (libs ONLY in lib/)
 # =========================
 if(LEO_BUILD_SHARED)
     if(WIN32)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_ABS_DIR}"
-            # exe
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_LIB_DIR}"
+            # exe in root
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:${PROJECT_NAME}>
                 "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
-            # dependent DLLs
+            # DLLs into lib/
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>
-                "${PACKAGE_ABS_DIR}"
+                "${PACKAGE_LIB_DIR}"
             COMMAND_EXPAND_LISTS
-            # resources
+            # proactively remove any stray DLLs in root (harmless if none)
+            COMMAND ${CMAKE_COMMAND} -E rm -f
+                "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:Leo::Runtime>"
+                "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:SDL3::SDL3>"
+            # resources to root
             COMMAND ${CMAKE_COMMAND}
                 -D INPUT_PACK="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}"
                 -D INPUT_DIR="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}"
                 -D DEST_DIR="${PACKAGE_ABS_DIR}"
                 -D RES_DIR_NAME="${LEO_RESOURCES_DIR}"
                 -P "${_PACK_SCRIPT}"
-            # docs
+            # docs to root
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.md"
-            COMMENT "Assembling ${PACKAGE_DIR} (Windows)"
+            COMMENT "Assembling ${PACKAGE_DIR} (Windows) with libs only in lib/"
         )
     elseif(APPLE)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_ABS_DIR}"
-            # exe
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_LIB_DIR}"
+            # exe in root
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:${PROJECT_NAME}>
                 "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
-            # dylibs
+            # dylibs into lib/
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:Leo::Runtime>
                 $<TARGET_FILE:SDL3::SDL3>
-                "${PACKAGE_ABS_DIR}"
-            # resources
+                "${PACKAGE_LIB_DIR}"
+            # proactively remove any stray dylibs in root
+            COMMAND ${CMAKE_COMMAND} -E rm -f
+                "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:Leo::Runtime>"
+                "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:SDL3::SDL3>"
+            # resources + docs
             COMMAND ${CMAKE_COMMAND}
                 -D INPUT_PACK="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}"
                 -D INPUT_DIR="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}"
                 -D DEST_DIR="${PACKAGE_ABS_DIR}"
                 -D RES_DIR_NAME="${LEO_RESOURCES_DIR}"
                 -P "${_PACK_SCRIPT}"
-            # docs
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.md"
-            COMMENT "Assembling ${PACKAGE_DIR} (macOS)"
+            COMMENT "Assembling ${PACKAGE_DIR} (macOS) with libs only in lib/"
         )
     elseif(UNIX AND NOT APPLE)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_ABS_DIR}"
-            # exe
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_LIB_DIR}"
+            # exe in root
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:${PROJECT_NAME}>
                 "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
-            # shared objects
+            # .so files into lib/
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:Leo::Runtime>
                 $<TARGET_FILE:SDL3::SDL3>
-                "${PACKAGE_ABS_DIR}"
-            # SONAME symlinks in package dir
+                "${PACKAGE_LIB_DIR}"
+            # SONAME symlinks in package lib/
             COMMAND ${CMAKE_COMMAND}
                 -D LIB_ABS="$<TARGET_FILE:Leo::Runtime>"
-                -D DEST_DIR="${PACKAGE_ABS_DIR}"
+                -D DEST_DIR="${PACKAGE_LIB_DIR}"
                 -D SONAME="$<TARGET_SONAME_FILE_NAME:Leo::Runtime>"
                 -P "${_SONAME_SCRIPT}"
             COMMAND ${CMAKE_COMMAND}
                 -D LIB_ABS="$<TARGET_FILE:SDL3::SDL3>"
-                -D DEST_DIR="${PACKAGE_ABS_DIR}"
+                -D DEST_DIR="${PACKAGE_LIB_DIR}"
                 -D SONAME="$<TARGET_SONAME_FILE_NAME:SDL3::SDL3>"
                 -P "${_SONAME_SCRIPT}"
-            # resources
+            # proactively remove any stray libs/symlinks in root (harmless if none)
+            COMMAND ${CMAKE_COMMAND} -E rm -f
+                "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:Leo::Runtime>"
+                "${PACKAGE_ABS_DIR}/$<TARGET_SONAME_FILE_NAME:Leo::Runtime>"
+                "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:SDL3::SDL3>"
+                "${PACKAGE_ABS_DIR}/$<TARGET_SONAME_FILE_NAME:SDL3::SDL3>"
+            # resources + docs to root
             COMMAND ${CMAKE_COMMAND}
                 -D INPUT_PACK="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}"
                 -D INPUT_DIR="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}"
                 -D DEST_DIR="${PACKAGE_ABS_DIR}"
                 -D RES_DIR_NAME="${LEO_RESOURCES_DIR}"
                 -P "${_PACK_SCRIPT}"
-            # docs
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.md"
-            COMMENT "Assembling ${PACKAGE_DIR} (Linux)"
+            COMMENT "Assembling ${PACKAGE_DIR} (Linux) with libs only in lib/"
             COMMAND_EXPAND_LISTS
         )
     endif()
 else()
-    # Static build: still make the folder and copy exe + resources + docs
+    # Static build: no lib/ subtree needed
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_ABS_DIR}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -349,4 +366,13 @@ else()
     )
 endif()
 
+# =========================
+# Convenience: run from build tree
+# =========================
+add_custom_target(run
+    COMMAND "$<TARGET_FILE:${PROJECT_NAME}>"
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+    DEPENDS ${PROJECT_NAME}
+    COMMENT "Run from build tree"
+)
 
