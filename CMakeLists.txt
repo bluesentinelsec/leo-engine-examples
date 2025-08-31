@@ -136,7 +136,6 @@ set(PACKAGE_LIB_DIR "${PACKAGE_ABS_DIR}/lib")
 # =========================
 if(LEO_BUILD_SHARED)
     if(WIN32)
-        # Copy DLLs next to exe
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>
@@ -145,7 +144,6 @@ if(LEO_BUILD_SHARED)
             COMMENT "Runtime DLLs (Windows)"
         )
     elseif(APPLE)
-        # Copy dylibs into lib/ and add symlink for compat
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${RUNTIME_DIR}/lib"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -155,7 +153,6 @@ if(LEO_BUILD_SHARED)
             COMMENT "Runtime dylibs (macOS)"
         )
     elseif(UNIX)
-        # Copy .so into lib/ and create SONAME symlinks
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${RUNTIME_DIR}/lib"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -185,13 +182,17 @@ if(LEO_BUILD_SHARED)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${PROJECT_NAME}> "${PACKAGE_ABS_DIR}"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:Leo::Runtime> $<TARGET_FILE:SDL3::SDL3> "${PACKAGE_LIB_DIR}"
-            # macOS symlink for compat
             COMMAND ${CMAKE_COMMAND} -E chdir "${PACKAGE_LIB_DIR}"
                 ${CMAKE_COMMAND} -E create_symlink "libleo.0.1.0.dylib" "libleo.0.dylib"
-            # Copy top-level docs/licenses
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE.txt"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.txt"
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/third_party_licenses" "${PACKAGE_ABS_DIR}/third_party_licenses"
+            # Copy resources.leopack or resources/ to release
+            COMMAND ${CMAKE_COMMAND}
+                -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
+                -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
+                -D DEST_DIR=${PACKAGE_ABS_DIR}
+                -P ${_PACK_SCRIPT}
             COMMENT "Assemble ${PACKAGE_DIR} (macOS)"
         )
     elseif(WIN32)
@@ -201,10 +202,15 @@ if(LEO_BUILD_SHARED)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> "${PACKAGE_LIB_DIR}"
             COMMAND_EXPAND_LISTS
-            # Copy top-level docs/licenses
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE.txt"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.txt"
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/third_party_licenses" "${PACKAGE_ABS_DIR}/third_party_licenses"
+            # Copy resources.leopack or resources/ to release
+            COMMAND ${CMAKE_COMMAND}
+                -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
+                -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
+                -D DEST_DIR=${PACKAGE_ABS_DIR}
+                -P ${_PACK_SCRIPT}
             COMMENT "Assemble ${PACKAGE_DIR} (Windows)"
         )
     elseif(UNIX) # Linux
@@ -213,7 +219,6 @@ if(LEO_BUILD_SHARED)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${PROJECT_NAME}> "${PACKAGE_ABS_DIR}"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:Leo::Runtime> $<TARGET_FILE:SDL3::SDL3> "${PACKAGE_LIB_DIR}"
-            # SONAME symlinks
             COMMAND ${CMAKE_COMMAND}
                 -D LIB_ABS=$<TARGET_FILE:Leo::Runtime>
                 -D DEST_DIR=${PACKAGE_LIB_DIR}
@@ -224,14 +229,31 @@ if(LEO_BUILD_SHARED)
                 -D DEST_DIR=${PACKAGE_LIB_DIR}
                 -D SONAME=$<TARGET_SONAME_FILE_NAME:SDL3::SDL3>
                 -P ${_SONAME_SCRIPT}
-            # Copy top-level docs/licenses
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE.txt"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.txt"
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/third_party_licenses" "${PACKAGE_ABS_DIR}/third_party_licenses"
+            # Copy resources.leopack or resources/ to release
+            COMMAND ${CMAKE_COMMAND}
+                -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
+                -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
+                -D DEST_DIR=${PACKAGE_ABS_DIR}
+                -P ${_PACK_SCRIPT}
             COMMENT "Assemble ${PACKAGE_DIR} (Linux)"
         )
     endif()
 endif()
+
+# =========================
+# Copy resources to build folder too
+# =========================
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+        -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
+        -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
+        -D DEST_DIR=${RUNTIME_DIR}
+        -P ${_PACK_SCRIPT}
+    COMMENT "Copy resources.leopack or resources/ to build dir"
+)
 
 # =========================
 # Convenience: run from build tree
