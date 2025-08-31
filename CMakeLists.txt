@@ -64,8 +64,8 @@ set(SOURCE_FILES
     src/demo_basic.c
     src/core/resizable_window.c
     src/core/fullscreen_window.c
-    external/getopt/getopt.c
-    external/getopt/getopt.h
+    src/getopt.c
+    src/getopt.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
@@ -188,6 +188,10 @@ if(LEO_BUILD_SHARED)
             # macOS symlink for compat
             COMMAND ${CMAKE_COMMAND} -E chdir "${PACKAGE_LIB_DIR}"
                 ${CMAKE_COMMAND} -E create_symlink "libleo.0.1.0.dylib" "libleo.0.dylib"
+            # Copy top-level docs/licenses
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE.txt"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.txt"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/third_party_licenses" "${PACKAGE_ABS_DIR}/third_party_licenses"
             COMMENT "Assemble ${PACKAGE_DIR} (macOS)"
         )
     elseif(WIN32)
@@ -197,6 +201,10 @@ if(LEO_BUILD_SHARED)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> "${PACKAGE_LIB_DIR}"
             COMMAND_EXPAND_LISTS
+            # Copy top-level docs/licenses
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE.txt"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.txt"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/third_party_licenses" "${PACKAGE_ABS_DIR}/third_party_licenses"
             COMMENT "Assemble ${PACKAGE_DIR} (Windows)"
         )
     elseif(UNIX) # Linux
@@ -216,6 +224,10 @@ if(LEO_BUILD_SHARED)
                 -D DEST_DIR=${PACKAGE_LIB_DIR}
                 -D SONAME=$<TARGET_SONAME_FILE_NAME:SDL3::SDL3>
                 -P ${_SONAME_SCRIPT}
+            # Copy top-level docs/licenses
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE.txt"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.txt"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/third_party_licenses" "${PACKAGE_ABS_DIR}/third_party_licenses"
             COMMENT "Assemble ${PACKAGE_DIR} (Linux)"
         )
     endif()

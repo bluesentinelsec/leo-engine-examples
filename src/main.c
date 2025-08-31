@@ -1,5 +1,6 @@
 #include "demos.h"
-#include <getopt/getopt.h>
+#include "getopt.h"
+
 #include <leo/leo.h>
 #include <stdio.h>
 #include <stdlib.h>
