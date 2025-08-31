@@ -20,9 +20,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # =========================
 if(APPLE)
   set(_RPATH_LIST "@executable_path/lib")
-else()
-  set(_RPATH_LIST "\$ORIGIN/lib")
+elseif(UNIX)
+  set(_RPATH_LIST "\$ORIGIN" "\$ORIGIN/lib")
 endif()
+
+if(UNIX AND NOT APPLE)
+  set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+endif()
+
+set(CMAKE_BUILD_RPATH "${_RPATH_LIST}")
+set(CMAKE_INSTALL_RPATH "${_RPATH_LIST}")
 
 # =========================
 # Options
@@ -62,10 +70,11 @@ set(SOURCE_FILES
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE Leo::Runtime)
+
 set(RUNTIME_DIR "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
 # ---- Windows/MSVC delay-load ----
-if (WIN32 AND MSVC)
+if(WIN32 AND MSVC)
   target_link_options(${PROJECT_NAME} PRIVATE
       /DELAYLOAD:SDL3.dll
       /DELAYLOAD:leo.dll)
@@ -73,17 +82,15 @@ if (WIN32 AND MSVC)
   target_compile_definitions(${PROJECT_NAME} PRIVATE LEO_WIN_DELAYLOAD=1)
 endif()
 
-# ---- macOS/Linux RPATH ----
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    INSTALL_RPATH "${_RPATH_LIST}"
-    BUILD_RPATH "${_RPATH_LIST}"
     BUILD_WITH_INSTALL_RPATH TRUE
     MACOSX_RPATH TRUE
 )
 
 # =========================
-# Helper script: copy resources
+# Helper scripts
 # =========================
+# Copy resources
 set(_PACK_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/_package_copy_resources.cmake")
 file(WRITE "${_PACK_SCRIPT}" [=[
     cmake_minimum_required(VERSION 3.25)
@@ -91,16 +98,23 @@ file(WRITE "${_PACK_SCRIPT}" [=[
         get_filename_component(_pack_name "${INPUT_PACK}" NAME)
         execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
             "${INPUT_PACK}" "${DEST_DIR}/${_pack_name}")
-        message(STATUS "Copied pack: ${_pack_name}")
     elseif(DEFINED INPUT_DIR AND IS_DIRECTORY "${INPUT_DIR}")
         if(NOT DEFINED RES_DIR_NAME OR RES_DIR_NAME STREQUAL "")
             set(RES_DIR_NAME "resources")
         endif()
         execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_directory
             "${INPUT_DIR}" "${DEST_DIR}/${RES_DIR_NAME}")
-        message(STATUS "Copied folder: ${RES_DIR_NAME}/")
-    else()
-        message(STATUS "No resources found (.leopack nor folder). Skipping.")
+    endif()
+]=])
+
+# Linux SONAME symlinks
+set(_SONAME_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/_package_fix_soname_links.cmake")
+file(WRITE "${_SONAME_SCRIPT}" [=[
+    cmake_minimum_required(VERSION 3.25)
+    if(DEFINED LIB_ABS AND EXISTS "${LIB_ABS}" AND DEFINED DEST_DIR AND DEFINED SONAME)
+        get_filename_component(_actual "${LIB_ABS}" NAME)
+        execute_process(COMMAND "${CMAKE_COMMAND}" -E chdir "${DEST_DIR}"
+            "${CMAKE_COMMAND}" -E create_symlink "${_actual}" "${SONAME}")
     endif()
 ]=])
 
@@ -118,81 +132,91 @@ set(PACKAGE_ABS_DIR "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_DIR}")
 set(PACKAGE_LIB_DIR "${PACKAGE_ABS_DIR}/lib")
 
 # =========================
-# Runtime population (with macOS symlinks)
+# Runtime population
 # =========================
 if(LEO_BUILD_SHARED)
-    if(APPLE)
+    if(WIN32)
+        # Copy DLLs next to exe
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            # ensure lib/ exists
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>
+                "${RUNTIME_DIR}"
+            COMMAND_EXPAND_LISTS
+            COMMENT "Runtime DLLs (Windows)"
+        )
+    elseif(APPLE)
+        # Copy dylibs into lib/ and add symlink for compat
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${RUNTIME_DIR}/lib"
-
-            # copy dylibs into lib/
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Leo::Runtime> "${RUNTIME_DIR}/lib"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL3::SDL3> "${RUNTIME_DIR}/lib"
-
-            # add compatibility symlinks (like Linux soname)
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:Leo::Runtime> $<TARGET_FILE:SDL3::SDL3> "${RUNTIME_DIR}/lib"
             COMMAND ${CMAKE_COMMAND} -E chdir "${RUNTIME_DIR}/lib"
                 ${CMAKE_COMMAND} -E create_symlink "libleo.0.1.0.dylib" "libleo.0.dylib"
-
-            # resources + docs
-            COMMAND ${CMAKE_COMMAND}
-                -D INPUT_PACK="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}"
-                -D INPUT_DIR="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}"
-                -D DEST_DIR="${RUNTIME_DIR}"
-                -D RES_DIR_NAME="${LEO_RESOURCES_DIR}"
-                -P "${_PACK_SCRIPT}"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/LICENSE" "${RUNTIME_DIR}/LICENSE"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/README.md" "${RUNTIME_DIR}/README.md"
-            COMMENT "Populate runtime dir with dylibs + symlinks"
+            COMMENT "Runtime dylibs (macOS)"
         )
     elseif(UNIX)
+        # Copy .so into lib/ and create SONAME symlinks
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${RUNTIME_DIR}/lib"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Leo::Runtime> "${RUNTIME_DIR}/lib"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL3::SDL3> "${RUNTIME_DIR}/lib"
-            COMMENT "Populate runtime dir (Linux)"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:Leo::Runtime> $<TARGET_FILE:SDL3::SDL3> "${RUNTIME_DIR}/lib"
+            COMMAND ${CMAKE_COMMAND}
+                -D LIB_ABS=$<TARGET_FILE:Leo::Runtime>
+                -D DEST_DIR=${RUNTIME_DIR}/lib
+                -D SONAME=$<TARGET_SONAME_FILE_NAME:Leo::Runtime>
+                -P ${_SONAME_SCRIPT}
+            COMMAND ${CMAKE_COMMAND}
+                -D LIB_ABS=$<TARGET_FILE:SDL3::SDL3>
+                -D DEST_DIR=${RUNTIME_DIR}/lib
+                -D SONAME=$<TARGET_SONAME_FILE_NAME:SDL3::SDL3>
+                -P ${_SONAME_SCRIPT}
+            COMMENT "Runtime .so libs (Linux)"
         )
     endif()
 endif()
 
 # =========================
-# Package assembly (with macOS symlinks)
+# Package assembly
 # =========================
 if(LEO_BUILD_SHARED)
     if(APPLE)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_LIB_DIR}"
-
-            # exe in root
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${PROJECT_NAME}> "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
-
-            # dylibs in lib/
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Leo::Runtime> "${PACKAGE_LIB_DIR}"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL3::SDL3> "${PACKAGE_LIB_DIR}"
-
-            # add compatibility symlinks
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${PROJECT_NAME}> "${PACKAGE_ABS_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:Leo::Runtime> $<TARGET_FILE:SDL3::SDL3> "${PACKAGE_LIB_DIR}"
+            # macOS symlink for compat
             COMMAND ${CMAKE_COMMAND} -E chdir "${PACKAGE_LIB_DIR}"
                 ${CMAKE_COMMAND} -E create_symlink "libleo.0.1.0.dylib" "libleo.0.dylib"
-
-            # resources + docs
-            COMMAND ${CMAKE_COMMAND}
-                -D INPUT_PACK="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}"
-                -D INPUT_DIR="${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}"
-                -D DEST_DIR="${PACKAGE_ABS_DIR}"
-                -D RES_DIR_NAME="${LEO_RESOURCES_DIR}"
-                -P "${_PACK_SCRIPT}"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/LICENSE" "${PACKAGE_ABS_DIR}/LICENSE"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/README.md" "${PACKAGE_ABS_DIR}/README.md"
-
-            COMMENT "Assembling ${PACKAGE_DIR} with dylibs + symlinks"
+            COMMENT "Assemble ${PACKAGE_DIR} (macOS)"
         )
-    elseif(UNIX)
+    elseif(WIN32)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_LIB_DIR}"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${PROJECT_NAME}> "${PACKAGE_ABS_DIR}/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Leo::Runtime> "${PACKAGE_LIB_DIR}"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL3::SDL3> "${PACKAGE_LIB_DIR}"
-            COMMENT "Assembling ${PACKAGE_DIR} (Linux)"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${PROJECT_NAME}> "${PACKAGE_ABS_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> "${PACKAGE_LIB_DIR}"
+            COMMAND_EXPAND_LISTS
+            COMMENT "Assemble ${PACKAGE_DIR} (Windows)"
+        )
+    elseif(UNIX) # Linux
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_LIB_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${PROJECT_NAME}> "${PACKAGE_ABS_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:Leo::Runtime> $<TARGET_FILE:SDL3::SDL3> "${PACKAGE_LIB_DIR}"
+            # SONAME symlinks
+            COMMAND ${CMAKE_COMMAND}
+                -D LIB_ABS=$<TARGET_FILE:Leo::Runtime>
+                -D DEST_DIR=${PACKAGE_LIB_DIR}
+                -D SONAME=$<TARGET_SONAME_FILE_NAME:Leo::Runtime>
+                -P ${_SONAME_SCRIPT}
+            COMMAND ${CMAKE_COMMAND}
+                -D LIB_ABS=$<TARGET_FILE:SDL3::SDL3>
+                -D DEST_DIR=${PACKAGE_LIB_DIR}
+                -D SONAME=$<TARGET_SONAME_FILE_NAME:SDL3::SDL3>
+                -P ${_SONAME_SCRIPT}
+            COMMENT "Assemble ${PACKAGE_DIR} (Linux)"
         )
     endif()
 endif()
