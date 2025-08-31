@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "win_dll_dirs.h"
+
 static void print_help(const char *program_name) {
   printf("Leo Engine Showcase — run example demos and games\n");
   printf("\n");
@@ -26,6 +28,10 @@ static void print_help(const char *program_name) {
 }
 
 int main(int argc, char *argv[]) {
+#ifdef _WIN32
+    leo_init_windows_dll_search();
+#endif
+
   int option_index = 0;
   static struct option long_options[] = {
       {"help", no_argument, NULL, 'h'},

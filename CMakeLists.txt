@@ -56,6 +56,7 @@ FetchContent_MakeAvailable(leo)
 # =========================
 set(SOURCE_FILES
     src/main.c
+    src/win_dll_dirs.c
     src/demos.c
     src/demos.h
     src/demo_basic.c
@@ -67,6 +68,16 @@ set(SOURCE_FILES
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE Leo::Runtime)
+
+# ---- Windows/MSVC: delay-load SDL3.dll and leo.dll ----
+if (WIN32 AND MSVC)
+  # Delay-load the two DLLs (names must match the runtime file names)
+  target_link_options(${PROJECT_NAME} PRIVATE
+      /DELAYLOAD:SDL3.dll
+      /DELAYLOAD:leo.dll)
+  target_link_libraries(${PROJECT_NAME} PRIVATE delayimp)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE LEO_WIN_DELAYLOAD=1)
+endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     BUILD_RPATH "${_RPATH_LIST}"
