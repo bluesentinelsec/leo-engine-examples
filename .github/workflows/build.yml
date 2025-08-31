@@ -31,6 +31,12 @@ jobs:
       - name: Run Showcase
         run: ./build/leo-engine-showcase --all --cicd
 
+      - name: Upload macOS Release Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: leo-engine-showcase-macOS
+          path: build/leo-engine-showcase.macOS.Release
+
   windows-msvc:
     name: Windows (x64, MSVC, Release)
     runs-on: windows-2022
@@ -53,6 +59,12 @@ jobs:
       - name: Run Showcase
         shell: pwsh
         run: .\build\Release\leo-engine-showcase.exe --all --cicd
+
+      - name: Upload Windows Release Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: leo-engine-showcase-Windows
+          path: build/leo-engine-showcase.Windows.Release
 
   debian12-gcc:
     name: Debian 12 (x64, gcc, Release)
@@ -88,4 +100,10 @@ jobs:
         run: |
           xvfb-run -a -s "-screen 0 1280x720x24" \
             ./build/leo-engine-showcase --all --cicd
+
+      - name: Upload Linux Release Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: leo-engine-showcase-Linux
+          path: build/leo-engine-showcase.Linux.Release
 
