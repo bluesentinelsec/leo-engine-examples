@@ -29,13 +29,13 @@ jobs:
         run: cmake --build build --parallel
 
       - name: Run Showcase
-        run: ./build/leo-engine-showcase --all --cicd
+        run: ./build/leo-engine-showcase.app/Contents/MacOS/leo-engine-showcase --all --cicd
 
-      - name: Upload macOS Release Package
+      - name: Upload macOS App Bundle
         uses: actions/upload-artifact@v4
         with:
           name: leo-engine-showcase-macOS
-          path: build/leo-engine-showcase.macOS.Release
+          path: build/leo-engine-showcase.app
 
   windows-msvc:
     name: Windows (x64, MSVC, Release)
