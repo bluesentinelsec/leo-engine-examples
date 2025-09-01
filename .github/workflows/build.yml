@@ -75,11 +75,17 @@ jobs:
       - name: Run Showcase (Universal)
         run: ./build-universal/leo-engine-showcase.app/Contents/MacOS/leo-engine-showcase --all --cicd
 
+      - name: Package macOS Universal App Bundle
+        run: |
+          cd build-universal
+          zip -r leo-engine-showcase-macOS-universal.zip leo-engine-showcase.app
+
       - name: Upload macOS Universal App Bundle
         uses: actions/upload-artifact@v4
         with:
           name: leo-engine-showcase-macOS-universal
-          path: build-universal/leo-engine-showcase.app
+          path: build-universal/leo-engine-showcase-macOS-universal.zip
+
 
   windows-msvc:
     name: Windows (x64, MSVC, Release)
