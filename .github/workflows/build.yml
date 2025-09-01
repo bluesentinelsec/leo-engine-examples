@@ -12,30 +12,71 @@ concurrency:
 
 jobs:
   macos:
-    name: macOS (arm64, clang, Release)
+    name: macOS (Universal, Release)
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure
+      - name: Configure arm64
         run: >
-          cmake -S . -B build
+          cmake -S . -B build-arm64
           -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DLEO_BUILD_SHARED=ON
           -DLEO_BUILD_TESTS=OFF
+          -DCMAKE_OSX_ARCHITECTURES=arm64
 
-      - name: Build
-        run: cmake --build build --parallel
+      - name: Build arm64
+        run: cmake --build build-arm64 --parallel
 
-      - name: Run Showcase
-        run: ./build/leo-engine-showcase.app/Contents/MacOS/leo-engine-showcase --all --cicd
+      - name: Configure x86_64
+        run: >
+          cmake -S . -B build-x86_64
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DLEO_BUILD_SHARED=ON
+          -DLEO_BUILD_TESTS=OFF
+          -DCMAKE_OSX_ARCHITECTURES=x86_64
 
-      - name: Upload macOS App Bundle
+      - name: Build x86_64
+        run: cmake --build build-x86_64 --parallel
+
+      - name: Create Universal App Bundle
+        run: |
+          set -eux
+          ARM64_APP=build-arm64/leo-engine-showcase.app
+          X86_APP=build-x86_64/leo-engine-showcase.app
+          OUT_APP=build-universal/leo-engine-showcase.app
+
+          # Copy arm64 bundle as base
+          rm -rf "$OUT_APP"
+          cp -R "$ARM64_APP" "$OUT_APP"
+
+          # Replace binary with universal one
+          lipo -create -output "$OUT_APP/Contents/MacOS/leo-engine-showcase" \
+            "$ARM64_APP/Contents/MacOS/leo-engine-showcase" \
+            "$X86_APP/Contents/MacOS/leo-engine-showcase"
+
+          # Replace each Framework dylib with universal version
+          for LIB in "$ARM64_APP/Contents/Frameworks/"*.dylib; do
+            LIBNAME=$(basename "$LIB")
+            lipo -create -output "$OUT_APP/Contents/Frameworks/$LIBNAME" \
+              "$ARM64_APP/Contents/Frameworks/$LIBNAME" \
+              "$X86_APP/Contents/Frameworks/$LIBNAME"
+            lipo -info "$OUT_APP/Contents/Frameworks/$LIBNAME"
+          done
+
+          # Verify main executable
+          lipo -info "$OUT_APP/Contents/MacOS/leo-engine-showcase"
+
+      - name: Run Showcase (Universal)
+        run: ./build-universal/leo-engine-showcase.app/Contents/MacOS/leo-engine-showcase --all --cicd
+
+      - name: Upload macOS Universal App Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: leo-engine-showcase-macOS
-          path: build/leo-engine-showcase.app
+          name: leo-engine-showcase-macOS-universal
+          path: build-universal/leo-engine-showcase.app
 
   windows-msvc:
     name: Windows (x64, MSVC, Release)
