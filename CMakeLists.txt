@@ -275,14 +275,16 @@ endif ()
 # =========================
 # Copy resources to build folder too
 # =========================
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND}
-        -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
-        -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
-        -D DEST_DIR=${RUNTIME_DIR}
-        -P ${_PACK_SCRIPT}
-        COMMENT "Copy resources.leopack or resources/ to build dir"
-)
+if (NOT APPLE)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND}
+            -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
+            -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
+            -D DEST_DIR=${RUNTIME_DIR}
+            -P ${_PACK_SCRIPT}
+            COMMENT "Copy resources.leopack or resources/ to build dir"
+    )
+endif ()
 
 # =========================
 # Convenience: run from build tree
