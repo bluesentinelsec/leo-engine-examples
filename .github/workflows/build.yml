@@ -122,13 +122,19 @@ jobs:
     container:
       image: debian:11
     steps:
-      - name: Install toolchain
+      - name: Install toolchain and deps
         run: |
           set -eux
           apt-get update
           apt-get install -y \
-            build-essential cmake ninja-build pkg-config git ca-certificates libsdl2-dev xvfb xauth
+            build-essential pkg-config git ca-certificates wget \
+            ninja-build libsdl2-dev xvfb xauth
           update-ca-certificates
+
+          # Install a newer CMake (3.25+)
+          wget -qO cmake.sh https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-linux-x86_64.sh
+          bash cmake.sh --skip-license --prefix=/usr/local
+          cmake --version
 
       - uses: actions/checkout@v4
 
