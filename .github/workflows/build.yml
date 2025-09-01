@@ -114,13 +114,14 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path release\leo-engine-showcase-Windows | Out-Null
           Copy-Item -Recurse -Force build\leo-engine-showcase.Windows.Release\* release\leo-engine-showcase-Windows\
-          Compress-Archive -Path release\leo-engine-showcase-Windows -DestinationPath leo-engine-showcase-Windows.zip -Force
+          $zipName = "leo-engine-showcase-Windows-msvc-amd64.zip"
+          Compress-Archive -Path release\leo-engine-showcase-Windows -DestinationPath $zipName -Force
 
       - name: Upload Windows Release Package
         uses: actions/upload-artifact@v4
         with:
           name: leo-engine-showcase-Windows
-          path: leo-engine-showcase-Windows.zip
+          path: leo-engine-showcase-Windows-msvc-amd64.zip
 
   debian12-gcc:
     name: Debian 12 (x64, gcc, Release)
