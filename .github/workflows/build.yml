@@ -151,9 +151,17 @@ jobs:
           xvfb-run -a -s "-screen 0 1280x720x24" \
             ./build/leo-engine-showcase --all --cicd
 
+      - name: Package Linux Release
+        run: |
+          set -eux
+          mkdir -p release/leo-engine-showcase-Linux
+          cp -r build/leo-engine-showcase.Linux.Release/* release/leo-engine-showcase-Linux/
+          cd release
+          tar -czf ../leo-engine-showcase-Linux.tar.gz leo-engine-showcase-Linux
+
       - name: Upload Linux Release Package
         uses: actions/upload-artifact@v4
         with:
           name: leo-engine-showcase-Linux
-          path: build/leo-engine-showcase.Linux.Release
+          path: leo-engine-showcase-Linux.tar.gz
 
