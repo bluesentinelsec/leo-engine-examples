@@ -48,8 +48,11 @@ jobs:
           X86_APP=build-x86_64/leo-engine-showcase.app
           OUT_APP=build-universal/leo-engine-showcase.app
 
+          # Ensure parent exists
+          rm -rf build-universal
+          mkdir -p build-universal
+
           # Copy arm64 bundle as base
-          rm -rf "$OUT_APP"
           cp -R "$ARM64_APP" "$OUT_APP"
 
           # Replace binary with universal one
