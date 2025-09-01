@@ -86,7 +86,6 @@ jobs:
           name: leo-engine-showcase-macOS-universal
           path: build-universal/leo-engine-showcase-macOS-universal.zip
 
-
   windows-msvc:
     name: Windows (x64, MSVC, Release)
     runs-on: windows-2022
@@ -110,11 +109,18 @@ jobs:
         shell: pwsh
         run: .\build\Release\leo-engine-showcase.exe --all --cicd
 
+      - name: Package Windows Release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release\leo-engine-showcase-Windows | Out-Null
+          Copy-Item -Recurse -Force build\leo-engine-showcase.Windows.Release\* release\leo-engine-showcase-Windows\
+          Compress-Archive -Path release\leo-engine-showcase-Windows -DestinationPath leo-engine-showcase-Windows.zip -Force
+
       - name: Upload Windows Release Package
         uses: actions/upload-artifact@v4
         with:
           name: leo-engine-showcase-Windows
-          path: build/leo-engine-showcase.Windows.Release
+          path: leo-engine-showcase-Windows.zip
 
   debian12-gcc:
     name: Debian 12 (x64, gcc, Release)
