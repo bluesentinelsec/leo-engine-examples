@@ -1,4 +1,4 @@
-FROM debian:12
+FROM debian:11
 
 # Install build deps
 RUN set -eux; \

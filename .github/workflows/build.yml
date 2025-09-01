@@ -116,11 +116,11 @@ jobs:
           name: leo-engine-showcase-Windows
           path: leo-engine-showcase-Windows-msvc-amd64.zip
 
-  debian12-gcc:
-    name: Debian 12 (x64, gcc, Release)
+  debian11-gcc:
+    name: Debian 11 (x64, gcc, Release)
     runs-on: ubuntu-latest
     container:
-      image: debian:12
+      image: debian:11
     steps:
       - name: Install toolchain
         run: |
