@@ -1,0 +1,33 @@
+name: Web Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  web-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Build Docker image (builder + runtime)
+      - name: Build web image
+        run: docker build -t leo-web .
+
+      # Extract webdist.zip from builder stage
+      - name: Create container from builder stage
+        run: |
+          docker create --name extract leo-web
+          docker cp extract:/webdist/webdist.zip ./webdist.zip
+          docker rm -f extract
+
+      # Upload webdist.zip as artifact
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: webdist
+          path: webdist.zip
+
