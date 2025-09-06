@@ -82,6 +82,7 @@ if (EMSCRIPTEN)
     target_link_options(${PROJECT_NAME} PRIVATE
         "-sUSE_SDL=3"
         "-sALLOW_MEMORY_GROWTH=1"
+        "-sFORCE_FILESYSTEM"
         "-sASYNCIFY"
         "--shell-file=${CMAKE_SOURCE_DIR}/static/index.html"
     )

@@ -21,21 +21,32 @@ jobs:
             build-essential cmake git python3 python3-pip \
             curl pkg-config zip
 
-      # Install Emscripten SDK
+      # Cache Emscripten SDK
+      - name: Cache emsdk
+        uses: actions/cache@v4
+        with:
+          path: $HOME/emsdk
+          key: emsdk-cache-${{ runner.os }}-latest
+          restore-keys: |
+            emsdk-cache-${{ runner.os }}-
+
+      # Install Emscripten SDK (if not cached)
       - name: Install Emscripten
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          git clone https://github.com/emscripten-core/emsdk.git /emsdk
-          cd /emsdk
+          git clone https://github.com/emscripten-core/emsdk.git $HOME/emsdk
+          cd $HOME/emsdk
           ./emsdk install latest
           ./emsdk activate latest
         shell: bash
 
+      # Setup environment
       - name: Setup environment
         run: |
-          echo "EMSDK=/emsdk" >> $GITHUB_ENV
-          echo "PATH=/emsdk:/emsdk/upstream/emscripten:$PATH" >> $GITHUB_ENV
-          echo "EM_CONFIG=/emsdk/.emscripten" >> $GITHUB_ENV
-          echo "EM_CACHE=/emsdk/.emscripten_cache" >> $GITHUB_ENV
+          echo "EMSDK=$HOME/emsdk" >> $GITHUB_ENV
+          echo "PATH=$HOME/emsdk:$HOME/emsdk/upstream/emscripten:$PATH" >> $GITHUB_ENV
+          echo "EM_CONFIG=$HOME/emsdk/.emscripten" >> $GITHUB_ENV
+          echo "EM_CACHE=$HOME/emsdk/.emscripten_cache" >> $GITHUB_ENV
 
       # Build with Emscripten
       - name: Build project
