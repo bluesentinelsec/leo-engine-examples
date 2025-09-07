@@ -60,14 +60,15 @@ FetchContent_MakeAvailable(leo)
 # =========================
 set(SOURCE_FILES
         src/main.c
+        src/getopt.c
+        src/getopt.h
         src/win_dll_dirs.c
         src/demos.c
         src/demos.h
         src/demo_basic.c
         src/core/resizable_window.c
         src/core/fullscreen_window.c
-        src/getopt.c
-        src/getopt.h
+        src/core/render_image.c
 )
 
 # =========================
