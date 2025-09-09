@@ -69,6 +69,8 @@ set(SOURCE_FILES
         src/core/resizable_window.c
         src/core/fullscreen_window.c
         src/core/render_image.c
+        src/core/graphics.c
+        src/core/starter_example.c
 )
 
 # =========================
