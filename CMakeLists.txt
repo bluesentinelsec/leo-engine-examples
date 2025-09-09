@@ -93,6 +93,10 @@ if (EMSCRIPTEN)
 else()
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
     target_link_libraries(${PROJECT_NAME} PRIVATE Leo::Runtime)
+    # Link math library for Unix (non-Apple, non-Emscripten) to fix cos/sin linker errors
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(${PROJECT_NAME} PRIVATE m)
+    endif()
 
     set(RUNTIME_DIR "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
@@ -319,4 +323,3 @@ else()
             COMMENT "Run from build tree"
     )
 endif ()
-
