@@ -71,6 +71,7 @@ set(SOURCE_FILES
         src/core/render_image.c
         src/core/graphics.c
         src/core/starter_example.c
+        src/audio/audio.c
 )
 
 # =========================
