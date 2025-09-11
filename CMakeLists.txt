@@ -122,16 +122,33 @@ else()
     set(_PACK_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/_package_copy_resources.cmake")
     file(WRITE "${_PACK_SCRIPT}" [=[
         cmake_minimum_required(VERSION 3.25)
-        if(DEFINED INPUT_PACK AND EXISTS "${INPUT_PACK}")
-            get_filename_component(_pack_name "${INPUT_PACK}" NAME)
-            execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-                "${INPUT_PACK}" "${DEST_DIR}/${_pack_name}")
-        elseif(DEFINED INPUT_DIR AND IS_DIRECTORY "${INPUT_DIR}")
-            if(NOT DEFINED RES_DIR_NAME OR RES_DIR_NAME STREQUAL "")
-                set(RES_DIR_NAME "resources")
+        # For Release builds: prefer .leopack, fallback to directory
+        # For Debug builds: prefer directory, fallback to .leopack
+        if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+            if(DEFINED INPUT_PACK AND EXISTS "${INPUT_PACK}")
+                get_filename_component(_pack_name "${INPUT_PACK}" NAME)
+                execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                    "${INPUT_PACK}" "${DEST_DIR}/${_pack_name}")
+            elseif(DEFINED INPUT_DIR AND IS_DIRECTORY "${INPUT_DIR}")
+                if(NOT DEFINED RES_DIR_NAME OR RES_DIR_NAME STREQUAL "")
+                    set(RES_DIR_NAME "resources")
+                endif()
+                execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_directory
+                    "${INPUT_DIR}" "${DEST_DIR}/${RES_DIR_NAME}")
             endif()
-            execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_directory
-                "${INPUT_DIR}" "${DEST_DIR}/${RES_DIR_NAME}")
+        else()
+            # Debug builds: prefer directory first
+            if(DEFINED INPUT_DIR AND IS_DIRECTORY "${INPUT_DIR}")
+                if(NOT DEFINED RES_DIR_NAME OR RES_DIR_NAME STREQUAL "")
+                    set(RES_DIR_NAME "resources")
+                endif()
+                execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_directory
+                    "${INPUT_DIR}" "${DEST_DIR}/${RES_DIR_NAME}")
+            elseif(DEFINED INPUT_PACK AND EXISTS "${INPUT_PACK}")
+                get_filename_component(_pack_name "${INPUT_PACK}" NAME)
+                execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                    "${INPUT_PACK}" "${DEST_DIR}/${_pack_name}")
+            endif()
         endif()
     ]=])
 
@@ -252,6 +269,7 @@ else()
                     -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
                     -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
                     -D DEST_DIR=$<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}>/Resources
+                    -D CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                     -P ${_PACK_SCRIPT}
                     COMMENT "Assemble macOS app bundle"
             )
@@ -269,6 +287,7 @@ else()
                     -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
                     -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
                     -D DEST_DIR=${PACKAGE_ABS_DIR}
+                    -D CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                     -P ${_PACK_SCRIPT}
                     COMMENT "Assemble ${PACKAGE_DIR} (Windows)"
             )
@@ -295,6 +314,7 @@ else()
                     -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
                     -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
                     -D DEST_DIR=${PACKAGE_ABS_DIR}
+                    -D CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                     -P ${_PACK_SCRIPT}
                     COMMENT "Assemble ${PACKAGE_DIR} (Linux)"
             )
@@ -310,6 +330,7 @@ else()
                 -D INPUT_PACK=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}
                 -D INPUT_DIR=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}
                 -D DEST_DIR=${RUNTIME_DIR}
+                -D CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                 -P ${_PACK_SCRIPT}
                 COMMENT "Copy resources.leopack or resources/ to build dir"
         )

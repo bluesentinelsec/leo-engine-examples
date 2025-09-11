@@ -4,6 +4,10 @@ build:
 	cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
 	cmake --build build --parallel
 
+release:
+	cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+	cmake --build build --parallel
+
 # Run target: adjust per platform
 run: build
 ifeq ($(shell uname),Darwin)
