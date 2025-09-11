@@ -89,6 +89,7 @@ if (EMSCRIPTEN)
         "-sFORCE_FILESYSTEM"
         "-sASYNCIFY"
         "--shell-file=${CMAKE_SOURCE_DIR}/static/index.html"
+        "--preload-file=${CMAKE_SOURCE_DIR}/resources@/resources"
     )
 
 else()

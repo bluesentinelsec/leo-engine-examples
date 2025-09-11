@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 typedef struct ImageDemoState
 {
@@ -14,8 +15,30 @@ static bool demo_setup(leo_GameContext *ctx)
 {
     ImageDemoState *state = (ImageDemoState *)ctx->user_data;
 
-    // Load the image from resources
-    state->image = leo_LoadTexture("resources/images/ai_vista_1536x1024.png");
+    // Read image file using standard library functions
+    FILE *file = fopen("resources/images/ai_vista_1536x1024.png", "rb");
+    if (!file) {
+        printf("Failed to open image file\n");
+        return false;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *buffer = malloc(size);
+    if (!buffer) {
+        fclose(file);
+        printf("Failed to allocate memory\n");
+        return false;
+    }
+
+    fread(buffer, 1, size, file);
+    fclose(file);
+
+    // Load texture from memory buffer
+    state->image = leo_LoadTextureFromMemory("png", buffer, (int)size);
+    free(buffer);
 
     printf("Loaded image %dx%d\n", state->image.width, state->image.height);
     return true; // success

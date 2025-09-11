@@ -35,6 +35,7 @@ RUN mkdir -p /webdist && \
     cp build/leo-engine-showcase.html /webdist/index.html && \
     cp build/leo-engine-showcase.js /webdist/ && \
     cp build/leo-engine-showcase.wasm /webdist/ && \
+    cp build/leo-engine-showcase.data /webdist/ && \
     if [ -f resources.leopack ]; then \
         cp resources.leopack /webdist/; \
     elif [ -d resources ]; then \
