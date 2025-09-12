@@ -72,6 +72,7 @@ set(SOURCE_FILES
         src/core/graphics.c
         src/core/starter_example.c
         src/audio/audio.c
+        src/vfs_demo.c
 )
 
 # =========================
@@ -83,13 +84,21 @@ if (EMSCRIPTEN)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE Leo::Runtime)
 
+    # Conditional preload based on what's available (prefer .leopack for Release)
+    set(EMSCRIPTEN_PRELOAD_ARGS "")
+    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND EXISTS "${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}")
+        set(EMSCRIPTEN_PRELOAD_ARGS "--preload-file=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_PACK}@/${LEO_RESOURCES_PACK}")
+    elseif(EXISTS "${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}")
+        set(EMSCRIPTEN_PRELOAD_ARGS "--preload-file=${CMAKE_SOURCE_DIR}/${LEO_RESOURCES_DIR}@/${LEO_RESOURCES_DIR}")
+    endif()
+
     target_link_options(${PROJECT_NAME} PRIVATE
         "-sUSE_SDL=3"
         "-sALLOW_MEMORY_GROWTH=1"
         "-sFORCE_FILESYSTEM"
         "-sASYNCIFY"
         "--shell-file=${CMAKE_SOURCE_DIR}/static/index.html"
-        "--preload-file=${CMAKE_SOURCE_DIR}/resources@/resources"
+        ${EMSCRIPTEN_PRELOAD_ARGS}
     )
 
 else()

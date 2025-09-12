@@ -14,10 +14,25 @@ static bool demo_setup(leo_GameContext *ctx)
 {
     ImageDemoState *state = (ImageDemoState *)ctx->user_data;
 
-    // Load the image from resources
-    state->image = leo_LoadTexture("resources/images/ai_vista_1536x1024.png");
+    if (!leo_MountResourcePack("resources.leopack", "password", 1))
+    {
+        printf("❌ Unable to mount resources.leopack\n");
+        return false;
+    }
+    else
+    {
+        printf("✅ Successfully mounted resources.leopack\n");
+    }
 
-    printf("Loaded image %dx%d\n", state->image.width, state->image.height);
+    // Load an image that we know exists in the Python-created pack
+    state->image = leo_LoadTexture("images/background_320x200.png");
+    
+    if (state->image._handle == NULL) {
+        printf("❌ Failed to load image from VFS\n");
+        return false;
+    }
+
+    printf("✅ Loaded image from VFS: %dx%d\n", state->image.width, state->image.height);
     return true; // success
 }
 
@@ -44,8 +59,10 @@ static void demo_render(leo_GameContext *ctx)
         .height = (float)state->image.height,
     };
 
-    // Position to draw at top-left corner of screen
-    leo_Vector2 pos = {0.0f, 0.0f};
+    // Position to draw at center of screen
+    float x = (1536 - state->image.width) / 2.0f;
+    float y = (1024 - state->image.height) / 2.0f;
+    leo_Vector2 pos = {x, y};
 
     // Draw with white tint (no color change)
     leo_DrawTextureRec(state->image, src, pos, LEO_WHITE);
@@ -54,6 +71,10 @@ static void demo_render(leo_GameContext *ctx)
 static void demo_render_ui(leo_GameContext *ctx)
 {
     leo_DrawFPS(10, 10);
+    
+    // Show that we're loading from VFS
+    leo_DrawText("Image loaded from Python-created resources.leopack", 10, 40, 20, LEO_GREEN);
+    leo_DrawText("VFS Path: images/background_320x200.png", 10, 70, 16, LEO_WHITE);
 }
 
 static void demo_shutdown(leo_GameContext *ctx)
@@ -61,7 +82,7 @@ static void demo_shutdown(leo_GameContext *ctx)
     ImageDemoState *state = (ImageDemoState *)ctx->user_data;
     leo_UnloadTexture(&state->image);
 
-    printf("Shutting down Image Demo.\n");
+    printf("✅ Image Demo shutdown complete\n");
 }
 
 bool ImageDemo(bool oneFrame)
@@ -74,13 +95,13 @@ bool ImageDemo(bool oneFrame)
     leo_GameConfig cfg = {
         .window_width = 1536,
         .window_height = 1024,
-        .window_title = "Image Demo",
+        .window_title = "Image Demo - VFS Loading",
         .target_fps = 60,
         .logical_width = 1536,
         .logical_height = 1024,
         .presentation = LEO_LOGICAL_PRESENTATION_LETTERBOX,
         .scale_mode = LEO_SCALE_LINEAR,
-        .clear_color = LEO_BLACK,
+        .clear_color = LEO_GRAY,
         .start_paused = false,
         .user_data = &state,
     };
@@ -88,11 +109,9 @@ bool ImageDemo(bool oneFrame)
     leo_GameCallbacks cb = {
         .on_setup = demo_setup,
         .on_update = demo_update,
-        .on_render_ui = demo_render_ui,
+        .on_render_ui = demo_render,  // Use render_ui callback for rendering
         .on_shutdown = demo_shutdown,
     };
 
-    cb.on_update = demo_update;
-    cb.on_render_ui = demo_render;
     return (leo_GameRun(&cfg, &cb) == 0);
 }
