@@ -4,6 +4,14 @@
 #include <stdio.h>
 
 /* ----------------------------------------------------------
+   Virtual Resolution Constants
+   ---------------------------------------------------------- */
+#define VIRTUAL_WIDTH 1280
+#define VIRTUAL_HEIGHT 720
+#define VIRTUAL_CENTER_X (VIRTUAL_WIDTH / 2)
+#define VIRTUAL_CENTER_Y (VIRTUAL_HEIGHT / 2)
+
+/* ----------------------------------------------------------
    Per-demo state (carried in ctx->user_data)
    ---------------------------------------------------------- */
 typedef struct FullscreenState
@@ -31,8 +39,8 @@ static bool demo_setup(leo_GameContext *ctx)
     state->show_lines = true;
     state->show_rectangles = true;
     state->time = 0.0f;
-    state->rect_x = 640.0f; // Center of 1280x720
-    state->rect_y = 360.0f;
+    state->rect_x = VIRTUAL_CENTER_X;
+    state->rect_y = VIRTUAL_CENTER_Y;
     state->rect_vx = 200.0f; // Pixels per second
     state->rect_vy = 150.0f;
     leo_SetFullscreen(state->fullscreen);
@@ -70,11 +78,17 @@ static void demo_update(leo_GameContext *ctx)
     state->rect_x += state->rect_vx * delta_time;
     state->rect_y += state->rect_vy * delta_time;
 
-    // Bounce off screen edges (1280x720)
-    if (state->rect_x < 50 || state->rect_x > 1230)
+    // Bounce off screen edges
+    if (state->rect_x < 50 || state->rect_x > VIRTUAL_WIDTH - 50)
         state->rect_vx = -state->rect_vx;
-    if (state->rect_y < 50 || state->rect_y > 670)
+    if (state->rect_y < 50 || state->rect_y > VIRTUAL_HEIGHT - 50)
         state->rect_vy = -state->rect_vy;
+
+    // Clamp position to screen bounds
+    if (state->rect_x < 50) state->rect_x = 50;
+    if (state->rect_x > VIRTUAL_WIDTH - 50) state->rect_x = VIRTUAL_WIDTH - 50;
+    if (state->rect_y < 50) state->rect_y = 50;
+    if (state->rect_y > VIRTUAL_HEIGHT - 50) state->rect_y = VIRTUAL_HEIGHT - 50;
 
     // Escape hatch for CI/CD: quit after one frame
     if (state->one_frame && ctx->frame >= 1)
@@ -101,8 +115,8 @@ static void demo_render_ui(leo_GameContext *ctx)
     {
         for (int i = 0; i < 100; i++)
         {
-            int x = (int)(sin(t + i * 0.1f) * 600 + 640); // Center at 640
-            int y = (int)(cos(t + i * 0.2f) * 300 + 360); // Center at 360
+            int x = (int)(sin(t + i * 0.1f) * (VIRTUAL_WIDTH * 0.47f) + VIRTUAL_CENTER_X);
+            int y = (int)(cos(t + i * 0.2f) * (VIRTUAL_HEIGHT * 0.42f) + VIRTUAL_CENTER_Y);
             leo_DrawPixel(x, y, color1);
         }
     }
@@ -113,8 +127,8 @@ static void demo_render_ui(leo_GameContext *ctx)
         for (int i = 0; i < 3; i++)
         {
             float radius = 50.0f + sin(t + i * 2.0f) * 20.0f;
-            int center_x = 640 + i * 200 - 200; // Spread across screen
-            int center_y = 360;
+            int center_x = VIRTUAL_CENTER_X + i * 200 - 200;
+            int center_y = VIRTUAL_CENTER_Y;
             leo_DrawCircle(center_x, center_y, radius, color2);
         }
     }
@@ -125,17 +139,17 @@ static void demo_render_ui(leo_GameContext *ctx)
         for (int i = -3; i <= 3; i++)
         {
             int offset = i * 100;
-            float rot = sin(t * 0.5f) * 0.2f; // Small rotation
-            int x1 = (int)(640 + offset * cos(rot) - 300 * sin(rot));
-            int y1 = (int)(360 + offset * sin(rot) + 300 * cos(rot));
-            int x2 = (int)(640 + offset * cos(rot) + 300 * sin(rot));
-            int y2 = (int)(360 + offset * sin(rot) - 300 * cos(rot));
+            float rot = sin(t * 0.5f) * 0.2f;
+            int x1 = (int)(VIRTUAL_CENTER_X + offset * cos(rot) - 300 * sin(rot));
+            int y1 = (int)(VIRTUAL_CENTER_Y + offset * sin(rot) + 300 * cos(rot));
+            int x2 = (int)(VIRTUAL_CENTER_X + offset * cos(rot) + 300 * sin(rot));
+            int y2 = (int)(VIRTUAL_CENTER_Y + offset * sin(rot) - 300 * cos(rot));
             leo_DrawLine(x1, y1, x2, y2, color3);
             // Perpendicular lines
-            x1 = (int)(640 - 300 * cos(rot) + offset * sin(rot));
-            y1 = (int)(360 - 300 * sin(rot) + offset * cos(rot));
-            x2 = (int)(640 + 300 * cos(rot) + offset * sin(rot));
-            y2 = (int)(360 + 300 * sin(rot) + offset * cos(rot));
+            x1 = (int)(VIRTUAL_CENTER_X - 300 * cos(rot) + offset * sin(rot));
+            y1 = (int)(VIRTUAL_CENTER_Y - 300 * sin(rot) + offset * cos(rot));
+            x2 = (int)(VIRTUAL_CENTER_X + 300 * cos(rot) + offset * sin(rot));
+            y2 = (int)(VIRTUAL_CENTER_Y + 300 * sin(rot) + offset * cos(rot));
             leo_DrawLine(x1, y1, x2, y2, color3);
         }
     }
@@ -166,19 +180,19 @@ bool GraphicsDemo(bool oneFrame)
         .show_lines = true,
         .show_rectangles = true,
         .time = 0.0f,
-        .rect_x = 640.0f,
-        .rect_y = 360.0f,
+        .rect_x = VIRTUAL_CENTER_X,
+        .rect_y = VIRTUAL_CENTER_Y,
         .rect_vx = 200.0f,
         .rect_vy = 150.0f,
     };
 
     leo_GameConfig cfg = {
-        .window_width = 1280,
-        .window_height = 720,
+        .window_width = VIRTUAL_WIDTH,
+        .window_height = VIRTUAL_HEIGHT,
         .window_title = "Graphics Demo",
         .target_fps = 60,
-        .logical_width = 0,
-        .logical_height = 0,
+        .logical_width = VIRTUAL_WIDTH,
+        .logical_height = VIRTUAL_HEIGHT,
         .presentation = LEO_LOGICAL_PRESENTATION_LETTERBOX,
         .scale_mode = LEO_SCALE_LINEAR,
         .clear_color = LEO_BLACK,
