@@ -12,6 +12,7 @@ bool ImageDemo(bool oneFrame);
 bool GraphicsDemo(bool oneFrame);
 bool AudioDemo(bool oneFrame);
 bool VFSDemo(bool oneFrame);
+bool FontDemo(bool oneFrame);
 
 /* Register demos here */
 Demo gDemos[] = {
@@ -22,6 +23,7 @@ Demo gDemos[] = {
     {"Graphics Demo", "How to work with Leo Engine drawing primitives", GraphicsDemo},
     {"Audio Demo", "How to work with Leo Engine music and sound primitives", AudioDemo},
     {"VFS Demo", "How to work with Leo Engine virtual filesystem", VFSDemo},
+    {"Font Demo", "Font rendering", FontDemo},
 };
 
 int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);

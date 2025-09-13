@@ -73,6 +73,7 @@ set(SOURCE_FILES
         src/core/starter_example.c
         src/audio/audio.c
         src/vfs_demo.c
+        src/font_demo.c
 )
 
 # =========================
