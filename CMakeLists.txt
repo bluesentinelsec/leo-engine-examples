@@ -74,6 +74,7 @@ set(SOURCE_FILES
         src/audio/audio.c
         src/vfs_demo.c
         src/font_demo.c
+        src/camera2d_demo.c
 )
 
 # =========================
