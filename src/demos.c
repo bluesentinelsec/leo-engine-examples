@@ -14,6 +14,7 @@ bool AudioDemo(bool oneFrame);
 bool VFSDemo(bool oneFrame);
 bool FontDemo(bool oneFrame);
 bool Camera2DDemo(bool oneFrame);
+bool CollisionDemo(bool oneFrame);
 
 /* Register demos here */
 Demo gDemos[] = {
@@ -26,6 +27,7 @@ Demo gDemos[] = {
     {"VFS Demo", "How to work with Leo Engine virtual filesystem", VFSDemo},
     {"Font Demo", "Font rendering", FontDemo},
     {"Camera 2D Demo", "Top-down camera following player with collision detection", Camera2DDemo},
+    {"Collision Demo", "Interactive 2D collision detection with bouncing shapes", CollisionDemo},
 };
 
 int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);
