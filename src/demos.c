@@ -15,6 +15,7 @@ bool VFSDemo(bool oneFrame);
 bool FontDemo(bool oneFrame);
 bool Camera2DDemo(bool oneFrame);
 bool CollisionDemo(bool oneFrame);
+bool MouseTestDemo(bool oneFrame);
 
 /* Register demos here */
 Demo gDemos[] = {
@@ -28,6 +29,7 @@ Demo gDemos[] = {
     {"Font Demo", "Font rendering", FontDemo},
     {"Camera 2D Demo", "Top-down camera following player with collision detection", Camera2DDemo},
     {"Collision Demo", "Interactive 2D collision detection with bouncing shapes", CollisionDemo},
+    {"Mouse Test Demo", "Test mouse coordinate behavior in windowed vs fullscreen", MouseTestDemo},
 };
 
 int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);
