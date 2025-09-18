@@ -1,4 +1,4 @@
-.PHONY: build run clean web
+.PHONY: build run clean web fmt
 
 build:
 	cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
@@ -22,4 +22,7 @@ clean:
 web: clean
 	docker build . -t dev:latest
 	docker run -it -p 8000:8000 dev:latest
+
+fmt:
+	find src/ -name "*.c" -o -name "*.h" | xargs clang-format -i
 

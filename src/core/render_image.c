@@ -26,8 +26,9 @@ static bool demo_setup(leo_GameContext *ctx)
 
     // Load an image that we know exists in the Python-created pack
     state->image = leo_LoadTexture("images/background_320x200.png");
-    
-    if (state->image._handle == NULL) {
+
+    if (state->image._handle == NULL)
+    {
         printf("❌ Failed to load image from VFS\n");
         return false;
     }
@@ -71,7 +72,7 @@ static void demo_render(leo_GameContext *ctx)
 static void demo_render_ui(leo_GameContext *ctx)
 {
     leo_DrawFPS(10, 10);
-    
+
     // Show that we're loading from VFS
     leo_DrawText("Image loaded from Python-created resources.leopack", 10, 40, 20, LEO_GREEN);
     leo_DrawText("VFS Path: images/background_320x200.png", 10, 70, 16, LEO_WHITE);
@@ -109,7 +110,7 @@ bool ImageDemo(bool oneFrame)
     leo_GameCallbacks cb = {
         .on_setup = demo_setup,
         .on_update = demo_update,
-        .on_render_ui = demo_render,  // Use render_ui callback for rendering
+        .on_render_ui = demo_render, // Use render_ui callback for rendering
         .on_shutdown = demo_shutdown,
     };
 

@@ -171,7 +171,7 @@ static void demo_render_ui(leo_GameContext *ctx)
     // Draw title and VFS info
     leo_DrawText("Audio Demo - VFS Loading", 20, 20, 24, LEO_WHITE);
     leo_DrawText("Audio loaded from Python-created resources.leopack", 20, 50, 16, LEO_GREEN);
-    
+
     // Draw controls
     leo_DrawText("Controls:", 20, 100, 18, LEO_YELLOW);
     leo_DrawText("SPACE - Play coin sound effect", 20, 130, 14, LEO_WHITE);
@@ -181,7 +181,7 @@ static void demo_render_ui(leo_GameContext *ctx)
     leo_DrawText("Q/E - Sound pan (left/right)", 20, 210, 14, LEO_WHITE);
     leo_DrawText("S - Stop all sounds", 20, 230, 14, LEO_WHITE);
     leo_DrawText("TAB - Toggle fullscreen", 20, 250, 14, LEO_WHITE);
-    
+
     // Draw FPS
     leo_DrawFPS(20, 300);
 }

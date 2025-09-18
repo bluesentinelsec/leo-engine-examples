@@ -85,10 +85,14 @@ static void demo_update(leo_GameContext *ctx)
         state->rect_vy = -state->rect_vy;
 
     // Clamp position to screen bounds
-    if (state->rect_x < 50) state->rect_x = 50;
-    if (state->rect_x > VIRTUAL_WIDTH - 50) state->rect_x = VIRTUAL_WIDTH - 50;
-    if (state->rect_y < 50) state->rect_y = 50;
-    if (state->rect_y > VIRTUAL_HEIGHT - 50) state->rect_y = VIRTUAL_HEIGHT - 50;
+    if (state->rect_x < 50)
+        state->rect_x = 50;
+    if (state->rect_x > VIRTUAL_WIDTH - 50)
+        state->rect_x = VIRTUAL_WIDTH - 50;
+    if (state->rect_y < 50)
+        state->rect_y = 50;
+    if (state->rect_y > VIRTUAL_HEIGHT - 50)
+        state->rect_y = VIRTUAL_HEIGHT - 50;
 
     // Escape hatch for CI/CD: quit after one frame
     if (state->one_frame && ctx->frame >= 1)
