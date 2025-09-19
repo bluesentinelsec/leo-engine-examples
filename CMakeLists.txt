@@ -76,6 +76,7 @@ set(SOURCE_FILES
         src/font_demo.c
         src/camera2d_demo.c
         src/collision_demo.c
+        src/keyboard_demo.c
 )
 
 # =========================
