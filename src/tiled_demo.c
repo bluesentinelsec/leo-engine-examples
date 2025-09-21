@@ -31,10 +31,7 @@ typedef struct {
 
 typedef struct {
     bool one_frame;
-    leo_Actor *dirt_actor;
-    leo_Actor *tree_actor;
     leo_Actor *player_actor;
-    leo_Actor *enemy_actor;
     
     // Tiled map data
     leo_TiledMap *map;
@@ -89,6 +86,113 @@ static const leo_ActorVTable enemy_vtable = {
 // Helper function to get collision rectangle for actor
 static leo_Rectangle get_actor_rect(float x, float y) {
     return (leo_Rectangle){x, y, TILE_SIZE, TILE_SIZE};
+}
+
+// Actor spawning functions
+static leo_Actor* spawn_tree_actor(leo_GameContext *ctx, float x, float y) {
+    leo_ActorDesc tree_desc = {
+        .name = "tree",
+        .vtable = &tree_vtable,
+        .user_data = NULL,
+        .groups = 0,
+        .start_paused = false
+    };
+    leo_Actor *tree = leo_actor_spawn(ctx->root, &tree_desc);
+    if (tree) {
+        TreeData *data = (TreeData *)leo_actor_userdata(tree);
+        if (data) {
+            data->x = x;
+            data->y = y;
+            data->collision_box = get_actor_rect(x, y);
+        }
+    }
+    return tree;
+}
+
+static leo_Actor* spawn_enemy_actor(leo_GameContext *ctx, float x, float y) {
+    leo_ActorDesc enemy_desc = {
+        .name = "enemy",
+        .vtable = &enemy_vtable,
+        .user_data = NULL,
+        .groups = 0,
+        .start_paused = false
+    };
+    leo_Actor *enemy = leo_actor_spawn(ctx->root, &enemy_desc);
+    if (enemy) {
+        EnemyData *data = (EnemyData *)leo_actor_userdata(enemy);
+        if (data) {
+            data->x = x;
+            data->y = y;
+            data->collision_box = get_actor_rect(x, y);
+        }
+    }
+    return enemy;
+}
+
+static leo_Actor* spawn_player_actor(leo_GameContext *ctx, float x, float y) {
+    leo_ActorDesc player_desc = {
+        .name = "player",
+        .vtable = &player_vtable,
+        .user_data = NULL,
+        .groups = 0,
+        .start_paused = false
+    };
+    leo_Actor *player = leo_actor_spawn(ctx->root, &player_desc);
+    if (player) {
+        PlayerData *data = (PlayerData *)leo_actor_userdata(player);
+        if (data) {
+            data->x = x;
+            data->y = y;
+        }
+    }
+    return player;
+}
+
+// Create world from Tiled map data
+static void create_world_from_map(leo_GameContext *ctx, leo_TiledMap *map) {
+    TiledDemoState *state = (TiledDemoState *)ctx->user_data;
+    
+    printf("Creating world from Tiled map...\n");
+    
+    // Process tree layer (tile-based obstacles)
+    const leo_TiledTileLayer *tree_layer = leo_tiled_find_tile_layer(map, "tree-layer");
+    if (tree_layer) {
+        int tree_count = 0;
+        for (int y = 0; y < tree_layer->height; y++) {
+            for (int x = 0; x < tree_layer->width; x++) {
+                uint32_t gid = leo_tiled_get_gid(tree_layer, x, y);
+                if (gid == 2) { // Tree tile
+                    spawn_tree_actor(ctx, x * 32, y * 32);
+                    tree_count++;
+                }
+            }
+        }
+        printf("  Created %d trees from tile layer\n", tree_count);
+    }
+    
+    // Process enemy objects
+    const leo_TiledObjectLayer *enemy_layer = leo_tiled_find_object_layer(map, "enemies");
+    if (enemy_layer) {
+        int enemy_count = 0;
+        for (int i = 0; i < enemy_layer->object_count; i++) {
+            const leo_TiledObject *obj = &enemy_layer->objects[i];
+            if (obj->type && strcmp(obj->type, "enemy") == 0) {
+                spawn_enemy_actor(ctx, (float)obj->x, (float)obj->y);
+                enemy_count++;
+            }
+        }
+        printf("  Created %d enemies from object layer\n", enemy_count);
+    }
+    
+    // Process player spawn
+    const leo_TiledObjectLayer *player_layer = leo_tiled_find_object_layer(map, "player");
+    if (player_layer && player_layer->object_count > 0) {
+        const leo_TiledObject *obj = &player_layer->objects[0];
+        if (obj->type && strcmp(obj->type, "player") == 0) {
+            state->player_actor = spawn_player_actor(ctx, (float)obj->x, (float)obj->y);
+            printf("  Created player at (%.0f, %.0f)\n", obj->x, obj->y);
+        }
+    }
 }
 
 // Dirt Actor Implementation
@@ -196,22 +300,32 @@ static void player_update(leo_Actor *self, float dt) {
     // Check collision with tree (get tree actor from parent system)
     leo_Rectangle player_rect = get_actor_rect(new_x, new_y);
     
-    // For now, we'll do a simple collision check - in a full game you'd iterate through all tree actors
-    TreeData *tree_data = NULL;
+    // Check collision with all tree actors
     leo_Actor *parent = leo_actor_parent(self);
     if (parent) {
-        // Find tree actor by name (simplified approach)
+        // Simple collision check - iterate through children to find trees
+        // In a full game, you'd use spatial partitioning or groups for efficiency
+        bool collision = false;
+        
+        // This is a simplified approach - in practice you'd use actor groups or spatial queries
+        // For now, we'll check against the first tree we find by name
         leo_Actor *tree_actor = leo_actor_find_child_by_name(parent, "tree");
-        if (tree_actor) {
-            tree_data = (TreeData *)leo_actor_userdata(tree_actor);
+        while (tree_actor && !collision) {
+            TreeData *tree_data = (TreeData *)leo_actor_userdata(tree_actor);
             if (tree_data && leo_CheckCollisionRecs(player_rect, tree_data->collision_box)) {
-                // Collision with tree - don't move
-                return;
+                collision = true;
             }
+            // Note: This only checks the first tree. In a full implementation,
+            // you'd iterate through all tree actors or use a spatial system
+            break;
+        }
+        
+        if (collision) {
+            return; // Don't move if collision detected
         }
     }
     
-    // Check collision with enemy
+    // Check collision with enemy (simplified - checks first enemy found)
     leo_Actor *enemy_actor = leo_actor_find_child_by_name(parent, "enemy");
     if (enemy_actor) {
         EnemyData *enemy_data = (EnemyData *)leo_actor_userdata(enemy_actor);
@@ -352,44 +466,10 @@ static bool demo_setup(leo_GameContext *ctx) {
         }
     }
     
-    // Create actors (existing code)
-    leo_ActorDesc dirt_desc = {
-        .name = "dirt",
-        .vtable = &dirt_vtable,
-        .user_data = NULL,
-        .groups = 0,
-        .start_paused = false
-    };
-    state->dirt_actor = leo_actor_spawn(ctx->root, &dirt_desc);
+    // Create world from map data
+    create_world_from_map(ctx, state->map);
     
-    leo_ActorDesc tree_desc = {
-        .name = "tree",
-        .vtable = &tree_vtable,
-        .user_data = NULL,
-        .groups = 0,
-        .start_paused = false
-    };
-    state->tree_actor = leo_actor_spawn(ctx->root, &tree_desc);
-    
-    leo_ActorDesc player_desc = {
-        .name = "player",
-        .vtable = &player_vtable,
-        .user_data = NULL,
-        .groups = 0,
-        .start_paused = false
-    };
-    state->player_actor = leo_actor_spawn(ctx->root, &player_desc);
-    
-    leo_ActorDesc enemy_desc = {
-        .name = "enemy",
-        .vtable = &enemy_vtable,
-        .user_data = NULL,
-        .groups = 0,
-        .start_paused = false
-    };
-    state->enemy_actor = leo_actor_spawn(ctx->root, &enemy_desc);
-    
-    printf("✅ Tiled Demo initialized with 4 actors + map\n");
+    printf("✅ Tiled Demo initialized with map-based world\n");
     return true;
 }
 
@@ -404,11 +484,22 @@ static void demo_update(leo_GameContext *ctx) {
     // Reset game on R key
     if (leo_IsKeyPressed(KEY_R)) {
         PlayerData *player_data = (PlayerData *)leo_actor_userdata(state->player_actor);
-        if (player_data) {
+        if (player_data && state->map) {
             player_data->alive = true;
-            player_data->x = 32;
-            player_data->y = 32;
-            printf("🔄 Game reset\n");
+            
+            // Reset to map spawn position
+            const leo_TiledObjectLayer *player_layer = leo_tiled_find_object_layer(state->map, "player");
+            if (player_layer && player_layer->object_count > 0) {
+                const leo_TiledObject *obj = &player_layer->objects[0];
+                player_data->x = (float)obj->x;
+                player_data->y = (float)obj->y;
+                printf("🔄 Player reset to spawn position (%.0f, %.0f)\n", obj->x, obj->y);
+            } else {
+                // Fallback to default position
+                player_data->x = 32;
+                player_data->y = 32;
+                printf("🔄 Player reset to default position\n");
+            }
         }
     }
 }
