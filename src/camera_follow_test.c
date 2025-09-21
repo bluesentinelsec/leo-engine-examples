@@ -9,12 +9,37 @@ typedef struct {
     float player_x, player_y;
     float player_speed;
     
+    // Textures
+    leo_Texture2D dirt_texture;
+    leo_Texture2D tree_texture;
+    leo_Texture2D hero_texture;
+    leo_Texture2D enemy_texture;
+    
     leo_Camera2D camera;
 } CameraFollowTestState;
 
 // Demo Implementation
 static bool demo_setup(leo_GameContext *ctx) {
     CameraFollowTestState *state = (CameraFollowTestState *)ctx->user_data;
+    
+    // Mount VFS
+    if (!leo_MountResourcePack("resources.leopack", "password", 1)) {
+        printf("❌ Unable to mount resources.leopack\n");
+        return false;
+    }
+    printf("✅ Successfully mounted resources.leopack\n");
+    
+    // Load textures
+    state->dirt_texture = leo_LoadTexture("images/dirt_32x32.png");
+    state->tree_texture = leo_LoadTexture("images/tree_32x32.png");
+    state->hero_texture = leo_LoadTexture("images/hero_32x32.png");
+    state->enemy_texture = leo_LoadTexture("images/enemy_32x32.png");
+    
+    printf("Texture loading results:\n");
+    printf("  Dirt: %s\n", state->dirt_texture._handle ? "OK" : "FAILED");
+    printf("  Tree: %s\n", state->tree_texture._handle ? "OK" : "FAILED");
+    printf("  Hero: %s\n", state->hero_texture._handle ? "OK" : "FAILED");
+    printf("  Enemy: %s\n", state->enemy_texture._handle ? "OK" : "FAILED");
     
     // Initialize player
     state->player_x = 400;
@@ -83,8 +108,31 @@ static void demo_render_ui(leo_GameContext *ctx) {
         leo_DrawLine(-1000, y, 1000, y, LEO_GRAY);
     }
     
-    // Draw player
-    leo_DrawRectangle((int)state->player_x - 16, (int)state->player_y - 16, 32, 32, LEO_RED);
+    // Draw test textures at FIXED world positions near camera spawn (400, 300)
+    leo_Rectangle src = {0, 0, 32, 32};
+    
+    // Dirt texture at fixed world position (336, 300) - left of spawn
+    if (state->dirt_texture._handle) {
+        leo_DrawTextureRec(state->dirt_texture, src, (leo_Vector2){336, 300}, LEO_WHITE);
+    }
+    
+    // Tree texture at fixed world position (464, 300) - right of spawn
+    if (state->tree_texture._handle) {
+        leo_DrawTextureRec(state->tree_texture, src, (leo_Vector2){464, 300}, LEO_WHITE);
+    }
+    
+    // Enemy texture at fixed world position (400, 236) - above spawn
+    if (state->enemy_texture._handle) {
+        leo_DrawTextureRec(state->enemy_texture, src, (leo_Vector2){400, 236}, LEO_WHITE);
+    }
+    
+    // Player sprite (hero texture)
+    if (state->hero_texture._handle) {
+        leo_DrawTextureRec(state->hero_texture, src, (leo_Vector2){state->player_x, state->player_y}, LEO_WHITE);
+    } else {
+        // Fallback to red rectangle if texture fails
+        leo_DrawRectangle((int)state->player_x - 16, (int)state->player_y - 16, 32, 32, LEO_RED);
+    }
     
     leo_EndMode2D();
     
@@ -102,6 +150,14 @@ static void demo_render_ui(leo_GameContext *ctx) {
 }
 
 static void demo_shutdown(leo_GameContext *ctx) {
+    CameraFollowTestState *state = (CameraFollowTestState *)ctx->user_data;
+    
+    // Cleanup textures
+    if (state->dirt_texture._handle) leo_UnloadTexture(&state->dirt_texture);
+    if (state->tree_texture._handle) leo_UnloadTexture(&state->tree_texture);
+    if (state->hero_texture._handle) leo_UnloadTexture(&state->hero_texture);
+    if (state->enemy_texture._handle) leo_UnloadTexture(&state->enemy_texture);
+    
     printf("✅ Camera Follow Test shutdown\n");
 }
 

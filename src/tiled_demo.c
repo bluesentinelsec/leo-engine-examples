@@ -82,6 +82,12 @@ static void demo_update(leo_GameContext *ctx) {
         return;
     }
     
+    // Store old positions for debug
+    float old_player_x = state->player_x;
+    float old_player_y = state->player_y;
+    float old_camera_x = state->camera.target.x;
+    float old_camera_y = state->camera.target.y;
+    
     // Update player position
     if (leo_IsKeyDown(KEY_W)) state->player_y -= state->player_speed * ctx->dt;
     if (leo_IsKeyDown(KEY_S)) state->player_y += state->player_speed * ctx->dt;
@@ -94,8 +100,8 @@ static void demo_update(leo_GameContext *ctx) {
     float world_max_x = 2000;
     float world_max_y = 2000;
 
-    float old_x = state->player_x;
-    float old_y = state->player_y;
+    float pre_clamp_x = state->player_x;
+    float pre_clamp_y = state->player_y;
 
     if (state->player_x < world_min_x) state->player_x = world_min_x;
     if (state->player_y < world_min_y) state->player_y = world_min_y;
@@ -103,12 +109,20 @@ static void demo_update(leo_GameContext *ctx) {
     if (state->player_y > world_max_y) state->player_y = world_max_y;
 
     // Debug: Log when clamping occurs
-    if (old_x != state->player_x || old_y != state->player_y) {
-        printf("Player clamped: (%.1f,%.1f) -> (%.1f,%.1f)\n", old_x, old_y, state->player_x, state->player_y);
+    if (pre_clamp_x != state->player_x || pre_clamp_y != state->player_y) {
+        printf("Player clamped: (%.1f,%.1f) -> (%.1f,%.1f)\n", pre_clamp_x, pre_clamp_y, state->player_x, state->player_y);
     }
 
     // Update camera to follow clamped player
     state->camera.target = (leo_Vector2){state->player_x, state->player_y};
+    
+    // Debug: Log movement and synchronization
+    if (old_player_x != state->player_x || old_player_y != state->player_y) {
+        printf("Movement: Player(%.1f,%.1f)->(%.1f,%.1f) Camera(%.1f,%.1f)->(%.1f,%.1f) Match:%s\n",
+               old_player_x, old_player_y, state->player_x, state->player_y,
+               old_camera_x, old_camera_y, state->camera.target.x, state->camera.target.y,
+               (state->player_x == state->camera.target.x && state->player_y == state->camera.target.y) ? "YES" : "NO");
+    }
 }
 
 static void demo_render_ui(leo_GameContext *ctx) {
