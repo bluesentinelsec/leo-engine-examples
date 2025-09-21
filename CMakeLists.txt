@@ -78,6 +78,7 @@ set(SOURCE_FILES
         src/collision_demo.c
         src/keyboard_demo.c
         src/gamepad_demo.c
+        src/animation.c
 )
 
 # =========================
