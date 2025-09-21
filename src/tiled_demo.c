@@ -35,6 +35,10 @@ typedef struct {
     leo_Actor *tree_actor;
     leo_Actor *player_actor;
     leo_Actor *enemy_actor;
+    
+    // Tiled map data
+    leo_TiledMap *map;
+    leo_Texture2D tileset_texture;
 } TiledDemoState;
 
 // Actor VTables
@@ -283,7 +287,72 @@ static bool demo_setup(leo_GameContext *ctx) {
     }
     printf("✅ Successfully mounted resources.leopack\n");
     
-    // Create actors
+    // Load Tiled map
+    leo_TiledLoadOptions tiled_opts = {0};
+    tiled_opts.allow_compression = 1;
+    
+    state->map = leo_tiled_load("maps/demo.json", &tiled_opts);
+    if (!state->map) {
+        printf("❌ Failed to load Tiled map: %s\n", leo_GetError());
+        return false;
+    }
+    
+    // Debug: Print map info
+    printf("✅ Loaded Tiled map:\n");
+    printf("  Size: %dx%d tiles\n", state->map->width, state->map->height);
+    printf("  Tile size: %dx%d pixels\n", state->map->tilewidth, state->map->tileheight);
+    printf("  Orientation: %s\n", state->map->orientation ? state->map->orientation : "NULL");
+    printf("  Render order: %s\n", state->map->renderorder ? state->map->renderorder : "NULL");
+    printf("  Tilesets: %d\n", state->map->tileset_count);
+    printf("  Layers: %d\n", state->map->layer_count);
+    
+    // Debug: Print tileset info
+    for (int i = 0; i < state->map->tileset_count; i++) {
+        const leo_TiledTileset *ts = &state->map->tilesets[i];
+        printf("  Tileset %d:\n", i);
+        printf("    Name: %s\n", ts->name ? ts->name : "NULL");
+        printf("    First GID: %d\n", ts->first_gid);
+        printf("    Tile size: %dx%d\n", ts->tilewidth, ts->tileheight);
+        printf("    Columns: %d, Count: %d\n", ts->columns, ts->tilecount);
+        printf("    Image: %s\n", ts->image ? ts->image : "NULL");
+    }
+    
+    // Debug: Print layer info
+    for (int i = 0; i < state->map->layer_count; i++) {
+        const leo_TiledLayer *layer = &state->map->layers[i];
+        printf("  Layer %d: Type %d\n", i, layer->type);
+        
+        if (layer->type == LEO_TILED_LAYER_TILE) {
+            const leo_TiledTileLayer *tl = &layer->as.tile;
+            printf("    Tile Layer: %s (%dx%d)\n", 
+                   tl->name ? tl->name : "NULL", tl->width, tl->height);
+            printf("    GID count: %zu\n", tl->gids_count);
+            
+            // Sample first few tiles
+            printf("    First 10 GIDs: ");
+            for (int j = 0; j < 10 && j < (int)tl->gids_count; j++) {
+                printf("%u ", tl->gids[j]);
+            }
+            printf("\n");
+        } else if (layer->type == LEO_TILED_LAYER_OBJECT) {
+            const leo_TiledObjectLayer *ol = &layer->as.object;
+            printf("    Object Layer: %s (%d objects)\n", 
+                   ol->name ? ol->name : "NULL", ol->object_count);
+        }
+    }
+    
+    // Try to load tileset texture (if available)
+    if (state->map->tileset_count > 0 && state->map->tilesets[0].image) {
+        state->tileset_texture = leo_LoadTexture(state->map->tilesets[0].image);
+        if (state->tileset_texture._handle) {
+            printf("✅ Loaded tileset texture: %dx%d\n", 
+                   state->tileset_texture.width, state->tileset_texture.height);
+        } else {
+            printf("❌ Failed to load tileset texture: %s\n", state->map->tilesets[0].image);
+        }
+    }
+    
+    // Create actors (existing code)
     leo_ActorDesc dirt_desc = {
         .name = "dirt",
         .vtable = &dirt_vtable,
@@ -320,7 +389,7 @@ static bool demo_setup(leo_GameContext *ctx) {
     };
     state->enemy_actor = leo_actor_spawn(ctx->root, &enemy_desc);
     
-    printf("✅ Tiled Demo initialized with 4 actors\n");
+    printf("✅ Tiled Demo initialized with 4 actors + map\n");
     return true;
 }
 
@@ -353,9 +422,34 @@ static void demo_render_ui(leo_GameContext *ctx) {
     // FPS counter
     leo_DrawFPS(10, 30);
     
+    // Map info
+    if (state->map) {
+        char info[128];
+        snprintf(info, sizeof(info), "Map: %dx%d (%dx%d tiles)", 
+                 state->map->width * state->map->tilewidth,
+                 state->map->height * state->map->tileheight,
+                 state->map->width, state->map->height);
+        leo_DrawText(info, 10, 50, 8, LEO_YELLOW);
+        
+        snprintf(info, sizeof(info), "Tilesets: %d, Layers: %d", 
+                 state->map->tileset_count, state->map->layer_count);
+        leo_DrawText(info, 10, 60, 8, LEO_YELLOW);
+        
+        // Show tileset texture status
+        if (state->tileset_texture._handle) {
+            snprintf(info, sizeof(info), "Tileset: %dx%d loaded", 
+                     state->tileset_texture.width, state->tileset_texture.height);
+            leo_DrawText(info, 10, 70, 8, LEO_GREEN);
+        } else {
+            leo_DrawText("Tileset: Not loaded", 10, 70, 8, LEO_RED);
+        }
+    } else {
+        leo_DrawText("Map: Not loaded", 10, 50, 8, LEO_RED);
+    }
+    
     // Controls
-    leo_DrawText("WASD/Arrows: Move", 10, 50, 8, LEO_GRAY);
-    leo_DrawText("R: Reset", 10, 60, 8, LEO_GRAY);
+    leo_DrawText("WASD/Arrows: Move", 10, 90, 8, LEO_GRAY);
+    leo_DrawText("R: Reset", 10, 100, 8, LEO_GRAY);
     
     // Player status
     if (state->player_actor) {
@@ -368,6 +462,19 @@ static void demo_render_ui(leo_GameContext *ctx) {
 }
 
 static void demo_shutdown(leo_GameContext *ctx) {
+    TiledDemoState *state = (TiledDemoState *)ctx->user_data;
+    
+    // Cleanup Tiled map
+    if (state->map) {
+        leo_tiled_free(state->map);
+        state->map = NULL;
+    }
+    
+    // Cleanup tileset texture
+    if (state->tileset_texture._handle) {
+        leo_UnloadTexture(&state->tileset_texture);
+    }
+    
     printf("✅ Tiled Demo shutdown complete\n");
 }
 
