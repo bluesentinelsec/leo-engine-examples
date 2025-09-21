@@ -16,6 +16,7 @@ bool FontDemo(bool oneFrame);
 bool Camera2DDemo(bool oneFrame);
 bool CollisionDemo(bool oneFrame);
 bool KeyboardDemo(bool oneFrame);
+bool GamepadDemo(bool oneFrame);
 
 /* Register demos here */
 Demo gDemos[] = {
@@ -30,6 +31,7 @@ Demo gDemos[] = {
     {"Camera 2D Demo", "Top-down camera following player with collision detection", Camera2DDemo},
     {"Collision Demo", "Interactive 2D collision detection with bouncing shapes", CollisionDemo},
     {"Keyboard Demo", "Interactive keyboard input demonstration with visual feedback", KeyboardDemo},
+    {"Gamepad Demo", "Interactive gamepad demonstration with visual feedback", GamepadDemo},
 };
 
 int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);
