@@ -80,6 +80,7 @@ set(SOURCE_FILES
         src/gamepad_demo.c
         src/animation.c
         src/signal_demo.c
+        src/actor_demo.c
 )
 
 # =========================
