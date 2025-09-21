@@ -82,6 +82,7 @@ set(SOURCE_FILES
         src/signal_demo.c
         src/actor_demo.c
         src/tiled_demo.c
+        src/camera_follow_test.c
 )
 
 # =========================
