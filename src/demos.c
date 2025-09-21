@@ -18,6 +18,7 @@ bool CollisionDemo(bool oneFrame);
 bool KeyboardDemo(bool oneFrame);
 bool GamepadDemo(bool oneFrame);
 bool AnimationDemo(bool oneFrame);
+bool SignalDemo(bool oneFrame);
 
 /* Register demos here */
 Demo gDemos[] = {
@@ -34,6 +35,7 @@ Demo gDemos[] = {
     {"Keyboard Demo", "Interactive keyboard input demonstration with visual feedback", KeyboardDemo},
     {"Gamepad Demo", "Interactive gamepad demonstration with visual feedback", GamepadDemo},
     {"Animation Demo", "Sprite sheet animation system demonstration", AnimationDemo},
+    {"Signal Demo", "Signal system demonstration with interactive connections", SignalDemo},
 };
 
 int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);

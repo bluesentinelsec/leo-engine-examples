@@ -79,6 +79,7 @@ set(SOURCE_FILES
         src/keyboard_demo.c
         src/gamepad_demo.c
         src/animation.c
+        src/signal_demo.c
 )
 
 # =========================

@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     // Default behavior: no args means run demo index 2
     if (action_count == 0)
     {
-        selected_index = 12;
+        selected_index = 13;
         action_count = 1;
         printf("No arguments provided. Defaulting to demo index 2.\n");
     }
