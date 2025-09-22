@@ -1,6 +1,7 @@
 #include <leo/leo.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <assert.h>
 
 typedef struct {
     // Player
@@ -44,12 +45,19 @@ static bool demo_setup(leo_GameContext *ctx) {
     state->player_speed = 150.0f;
 
     // Initialize camera
-    state->camera.target = (leo_Vector2){state->player_x, state->player_y};
     int w = leo_GetScreenWidth();
     int h = leo_GetScreenHeight();
+    assert(w > 0 && h > 0);
+    printf("Screen size: %dx%d\n", w, h);
+
+    state->camera.target = (leo_Vector2){state->player_x, state->player_y};
     state->camera.offset = (leo_Vector2){w / 2.0f, h / 2.0f}; // True screen center
     state->camera.rotation = 0.0f;
     state->camera.zoom = 1.0f;
+
+    printf("Camera initialized: target=(%.1f, %.1f), offset=(%.1f, %.1f)\n",
+           state->camera.target.x, state->camera.target.y,
+           state->camera.offset.x, state->camera.offset.y);
 
     return true;
 }
@@ -70,6 +78,15 @@ static void demo_update(leo_GameContext *ctx) {
     // Camera follows player
     state->camera.target.x = state->player_x;
     state->camera.target.y = state->player_y;
+
+    // Debug info each frame (throttled to every 60 frames)
+    if (ctx->frame % 60 == 0) {
+        printf("[Frame %lld] Player=(%.1f, %.1f) CameraTarget=(%.1f, %.1f) Offset=(%.1f, %.1f)\n",
+               (long long)ctx->frame,
+               state->player_x, state->player_y,
+               state->camera.target.x, state->camera.target.y,
+               state->camera.offset.x, state->camera.offset.y);
+    }
 
     // Escape hatch (CI/CD)
     if (state->one_frame && ctx->frame >= 1) {
