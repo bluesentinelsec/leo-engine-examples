@@ -1,14 +1,25 @@
 #include <leo/leo.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 typedef struct {
-    // Player
-    float player_x, player_y;
-    float player_speed;
-    float spawn_x, spawn_y;  // Respawn position
-    bool player_alive;
+    float x, y;
+    float spawn_x, spawn_y;
+    float speed;
+    bool alive;
+} PlayerData;
 
+typedef struct {
+    float x, y;
+    float origin_x, origin_y;
+    float speed;
+    float direction_x, direction_y;
+    float change_timer;
+} EnemyData;
+
+typedef struct {
     // Camera
     leo_Camera2D camera;
 
@@ -21,8 +32,173 @@ typedef struct {
     // Tiled map
     leo_TiledMap *map;
 
+    // Actor system
+    leo_ActorSystem *actor_system;
+    leo_Actor *player_actor;
+
     bool one_frame;
 } ZeldaDemoState;
+
+/* ----------------------------------------------------------
+   Collision helpers
+   ---------------------------------------------------------- */
+static void check_single_enemy_collision(leo_Actor *actor, void *user_data);
+
+static bool check_tree_collision(ZeldaDemoState *state, leo_Rectangle entity_rect) {
+    if (!state->map) return false;
+    
+    const leo_TiledTileLayer *treeLayer = leo_tiled_find_tile_layer(state->map, "tree-layer");
+    if (!treeLayer) return false;
+    
+    for (int y = 0; y < treeLayer->height; y++) {
+        for (int x = 0; x < treeLayer->width; x++) {
+            uint32_t gid = leo_tiled_get_gid(treeLayer, x, y);
+            if (gid == 2) { // Tree tile
+                leo_Rectangle tree_rect = {x * 32.0f, y * 32.0f, 32, 32};
+                if (leo_CheckCollisionRecs(entity_rect, tree_rect)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+static void check_enemy_collisions(leo_Actor *self) {
+    ZeldaDemoState *state = (ZeldaDemoState *)leo_actor_userdata(leo_actor_parent(self));
+    PlayerData *player_data = (PlayerData *)leo_actor_userdata(self);
+    
+    if (!player_data->alive) return;
+    
+    leo_Rectangle player_rect = {player_data->x, player_data->y, 32, 32};
+    
+    // Check collision with all enemies
+    leo_Actor *root = leo_actor_system_root(state->actor_system);
+    leo_actor_for_each_child(root, check_single_enemy_collision, &player_rect);
+}
+
+static void check_single_enemy_collision(leo_Actor *actor, void *user_data) {
+    leo_Rectangle *player_rect = (leo_Rectangle *)user_data;
+    
+    if (strcmp(leo_actor_name(actor), "enemy") != 0) return;
+    
+    EnemyData *enemy_data = (EnemyData *)leo_actor_userdata(actor);
+    leo_Rectangle enemy_rect = {enemy_data->x, enemy_data->y, 32, 32};
+    
+    if (leo_CheckCollisionRecs(*player_rect, enemy_rect)) {
+        // Get player from parent and kill them
+        ZeldaDemoState *state = (ZeldaDemoState *)leo_actor_userdata(leo_actor_parent(actor));
+        if (state->player_actor) {
+            PlayerData *player_data = (PlayerData *)leo_actor_userdata(state->player_actor);
+            player_data->alive = false;
+        }
+    }
+}
+
+/* ----------------------------------------------------------
+   Player Actor
+   ---------------------------------------------------------- */
+static void player_update(leo_Actor *self, float dt) {
+    PlayerData *data = (PlayerData *)leo_actor_userdata(self);
+    ZeldaDemoState *state = (ZeldaDemoState *)leo_actor_userdata(leo_actor_parent(self));
+    
+    if (!data->alive) return;
+
+    float dx = 0, dy = 0;
+    if (leo_IsKeyDown(KEY_A) || leo_IsKeyDown(KEY_LEFT)) dx = -1;
+    if (leo_IsKeyDown(KEY_D) || leo_IsKeyDown(KEY_RIGHT)) dx = 1;
+    if (leo_IsKeyDown(KEY_W) || leo_IsKeyDown(KEY_UP)) dy = -1;
+    if (leo_IsKeyDown(KEY_S) || leo_IsKeyDown(KEY_DOWN)) dy = 1;
+
+    float new_x = data->x + dx * data->speed * dt;
+    float new_y = data->y + dy * data->speed * dt;
+
+    // Check tree collisions with full rectangle
+    leo_Rectangle new_rect = {new_x, new_y, 32, 32};
+    if (!check_tree_collision(state, new_rect)) {
+        data->x = new_x;
+        data->y = new_y;
+    }
+    
+    // Check enemy collisions
+    check_enemy_collisions(self);
+}
+
+static void player_render(leo_Actor *self) {
+    ZeldaDemoState *state = (ZeldaDemoState *)leo_actor_userdata(leo_actor_parent(self));
+    PlayerData *data = (PlayerData *)leo_actor_userdata(self);
+    
+    if (data->alive) {
+        leo_DrawTextureRec(state->hero_texture, (leo_Rectangle){0, 0, 32, 32}, 
+                         (leo_Vector2){data->x, data->y}, LEO_WHITE);
+    }
+}
+
+static leo_ActorVTable player_vtable = {
+    .on_update = player_update,
+    .on_render = player_render,
+};
+
+/* ----------------------------------------------------------
+   Enemy Actor
+   ---------------------------------------------------------- */
+static void enemy_update(leo_Actor *self, float dt) {
+    EnemyData *data = (EnemyData *)leo_actor_userdata(self);
+    ZeldaDemoState *state = (ZeldaDemoState *)leo_actor_userdata(leo_actor_parent(self));
+    
+    // Change direction randomly every 1-3 seconds
+    data->change_timer -= dt;
+    if (data->change_timer <= 0) {
+        data->direction_x = (float)(rand() % 3 - 1); // -1, 0, or 1
+        data->direction_y = (float)(rand() % 3 - 1);
+        data->change_timer = 1.0f + (float)(rand() % 200) / 100.0f; // 1-3 seconds
+    }
+    
+    float new_x = data->x + data->direction_x * data->speed * dt;
+    float new_y = data->y + data->direction_y * data->speed * dt;
+    
+    // Keep within 100 pixels of origin
+    float max_distance = 100.0f;
+    if (new_x < data->origin_x - max_distance) new_x = data->origin_x - max_distance;
+    if (new_x > data->origin_x + max_distance) new_x = data->origin_x + max_distance;
+    if (new_y < data->origin_y - max_distance) new_y = data->origin_y + max_distance;
+    if (new_y > data->origin_y + max_distance) new_y = data->origin_y + max_distance;
+    
+    // World bounds (assuming 32x32 tiles and reasonable map size)
+    if (new_x < 0) new_x = 0;
+    if (new_y < 0) new_y = 0;
+    if (state->map) {
+        float world_width = state->map->width * 32.0f - 32;
+        float world_height = state->map->height * 32.0f - 32;
+        if (new_x > world_width) new_x = world_width;
+        if (new_y > world_height) new_y = world_height;
+    }
+    
+    // Check tree collision
+    leo_Rectangle new_rect = {new_x, new_y, 32, 32};
+    if (!check_tree_collision(state, new_rect)) {
+        data->x = new_x;
+        data->y = new_y;
+    } else {
+        // Change direction on collision
+        data->direction_x = -data->direction_x;
+        data->direction_y = -data->direction_y;
+        data->change_timer = 0.5f; // Change direction soon
+    }
+}
+
+static void enemy_render(leo_Actor *self) {
+    ZeldaDemoState *state = (ZeldaDemoState *)leo_actor_userdata(leo_actor_parent(self));
+    EnemyData *data = (EnemyData *)leo_actor_userdata(self);
+    
+    leo_DrawTextureRec(state->enemy_texture, (leo_Rectangle){0, 0, 32, 32}, 
+                     (leo_Vector2){data->x, data->y}, LEO_WHITE);
+}
+
+static leo_ActorVTable enemy_vtable = {
+    .on_update = enemy_update,
+    .on_render = enemy_render,
+};
 
 /* ----------------------------------------------------------
    Setup
@@ -51,31 +227,64 @@ static bool demo_setup(leo_GameContext *ctx) {
     }
     printf("✅ Loaded Tiled map: %dx%d tiles\n", state->map->width, state->map->height);
 
-    // Find player spawn from map
+    // Create actor system
+    state->actor_system = leo_actor_system_create();
+    leo_Actor *root = leo_actor_system_root(state->actor_system);
+    leo_actor_set_userdata(root, state);
+
+    // Create player actor
+    PlayerData *player_data = malloc(sizeof(PlayerData));
     const leo_TiledObjectLayer *playerLayer = leo_tiled_find_object_layer(state->map, "player");
     if (playerLayer && playerLayer->object_count > 0) {
-        state->player_x = playerLayer->objects[0].x;
-        state->player_y = playerLayer->objects[0].y;
-        printf("✅ Player spawn: (%.0f, %.0f)\n", state->player_x, state->player_y);
+        player_data->x = playerLayer->objects[0].x;
+        player_data->y = playerLayer->objects[0].y;
+        printf("✅ Player spawn: (%.0f, %.0f)\n", player_data->x, player_data->y);
     } else {
-        // Fallback spawn
-        state->player_x = 100.0f;
-        state->player_y = 100.0f;
-        printf("⚠️ Using fallback player spawn: (%.0f, %.0f)\n", state->player_x, state->player_y);
+        player_data->x = 100.0f;
+        player_data->y = 100.0f;
+        printf("⚠️ Using fallback player spawn: (%.0f, %.0f)\n", player_data->x, player_data->y);
     }
     
-    // Store spawn position for respawning
-    state->spawn_x = state->player_x;
-    state->spawn_y = state->player_y;
-    state->player_alive = true;
-    
-    state->player_speed = 150.0f;
+    player_data->spawn_x = player_data->x;
+    player_data->spawn_y = player_data->y;
+    player_data->speed = 150.0f;
+    player_data->alive = true;
+
+    leo_ActorDesc player_desc = {
+        .name = "player",
+        .vtable = &player_vtable,
+        .user_data = player_data,
+    };
+    state->player_actor = leo_actor_spawn(root, &player_desc);
+
+    // Create enemies from map
+    const leo_TiledObjectLayer *enemyLayer = leo_tiled_find_object_layer(state->map, "enemies");
+    if (enemyLayer) {
+        for (int i = 0; i < enemyLayer->object_count; i++) {
+            EnemyData *enemy_data = malloc(sizeof(EnemyData));
+            enemy_data->x = enemyLayer->objects[i].x;
+            enemy_data->y = enemyLayer->objects[i].y;
+            enemy_data->origin_x = enemy_data->x;
+            enemy_data->origin_y = enemy_data->y;
+            enemy_data->speed = 30.0f;
+            enemy_data->direction_x = (float)(rand() % 3 - 1);
+            enemy_data->direction_y = (float)(rand() % 3 - 1);
+            enemy_data->change_timer = 1.0f;
+
+            leo_ActorDesc enemy_desc = {
+                .name = "enemy",
+                .vtable = &enemy_vtable,
+                .user_data = enemy_data,
+            };
+            leo_actor_spawn(root, &enemy_desc);
+        }
+    }
 
     // Initialize camera
     int w = leo_GetScreenWidth();
     int h = leo_GetScreenHeight();
-    state->camera.target = (leo_Vector2){state->player_x, state->player_y};
-    state->camera.offset = (leo_Vector2){w / 2.0f, h / 2.0f}; // True screen center
+    state->camera.target = (leo_Vector2){player_data->x, player_data->y};
+    state->camera.offset = (leo_Vector2){w / 2.0f, h / 2.0f};
     state->camera.rotation = 0.0f;
     state->camera.zoom = 1.0f;
 
@@ -90,87 +299,22 @@ static void demo_update(leo_GameContext *ctx) {
     float dt = ctx->dt;
 
     // Handle respawn
-    if (!state->player_alive && leo_IsKeyReleased(KEY_R)) {
-        state->player_x = state->spawn_x;
-        state->player_y = state->spawn_y;
-        state->player_alive = true;
+    if (state->player_actor) {
+        PlayerData *player_data = (PlayerData *)leo_actor_userdata(state->player_actor);
+        
+        if (!player_data->alive && leo_IsKeyReleased(KEY_R)) {
+            player_data->x = player_data->spawn_x;
+            player_data->y = player_data->spawn_y;
+            player_data->alive = true;
+        }
+        
+        // Update camera to follow player
+        state->camera.target.x = player_data->x;
+        state->camera.target.y = player_data->y;
     }
 
-    // Only move if alive
-    if (state->player_alive) {
-        // Store old position for collision rollback
-        float old_x = state->player_x;
-        float old_y = state->player_y;
-
-        // WASD movement
-        if (leo_IsKeyDown(KEY_W)) state->player_y -= state->player_speed * dt;
-        if (leo_IsKeyDown(KEY_S)) state->player_y += state->player_speed * dt;
-        if (leo_IsKeyDown(KEY_A)) state->player_x -= state->player_speed * dt;
-        if (leo_IsKeyDown(KEY_D)) state->player_x += state->player_speed * dt;
-
-        // Clamp player to world bounds (map size: 130x80 tiles = 4160x2560 pixels)
-        float world_min_x = 0;
-        float world_min_y = 0;
-        float world_max_x = 4160;
-        float world_max_y = 2560;
-
-        if (state->player_x < world_min_x) state->player_x = world_min_x;
-        if (state->player_y < world_min_y) state->player_y = world_min_y;
-        if (state->player_x > world_max_x) state->player_x = world_max_x;
-        if (state->player_y > world_max_y) state->player_y = world_max_y;
-
-        // Check tree collisions
-        const leo_TiledTileLayer *treeLayer = leo_tiled_find_tile_layer(state->map, "tree-layer");
-        if (treeLayer) {
-            leo_Rectangle playerRect = {state->player_x, state->player_y, 32, 32};
-            
-            // Check tiles around player position
-            int tile_x = (int)(state->player_x / 32);
-            int tile_y = (int)(state->player_y / 32);
-            
-            for (int dy = -1; dy <= 1; dy++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    int check_x = tile_x + dx;
-                    int check_y = tile_y + dy;
-                    
-                    if (check_x >= 0 && check_x < treeLayer->width && 
-                        check_y >= 0 && check_y < treeLayer->height) {
-                        
-                        uint32_t gid = leo_tiled_get_gid(treeLayer, check_x, check_y);
-                        if (gid == 2) { // Tree tile
-                            leo_Rectangle treeRect = {check_x * 32.0f, check_y * 32.0f, 32, 32};
-                            if (leo_CheckCollisionRecs(playerRect, treeRect)) {
-                                // Rollback movement
-                                state->player_x = old_x;
-                                state->player_y = old_y;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Check enemy collisions
-        const leo_TiledObjectLayer *enemyLayer = leo_tiled_find_object_layer(state->map, "enemies");
-        if (enemyLayer) {
-            leo_Rectangle playerRect = {state->player_x, state->player_y, 32, 32};
-            
-            for (int i = 0; i < enemyLayer->object_count; i++) {
-                const leo_TiledObject *enemy = &enemyLayer->objects[i];
-                leo_Rectangle enemyRect = {enemy->x, enemy->y, 32, 32};
-                
-                if (leo_CheckCollisionRecs(playerRect, enemyRect)) {
-                    state->player_alive = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    // Camera follows player
-    state->camera.target.x = state->player_x;
-    state->camera.target.y = state->player_y;
+    // Update all actors
+    leo_actor_system_update(state->actor_system, dt);
 
     // Escape hatch (CI/CD)
     if (state->one_frame && ctx->frame >= 1) {
@@ -216,22 +360,10 @@ static void demo_render_ui(leo_GameContext *ctx) {
                 }
             }
         }
-
-        // Render enemies from object layer
-        const leo_TiledObjectLayer *enemyLayer = leo_tiled_find_object_layer(state->map, "enemies");
-        if (enemyLayer) {
-            for (int i = 0; i < enemyLayer->object_count; i++) {
-                const leo_TiledObject *enemy = &enemyLayer->objects[i];
-                leo_DrawTextureRec(state->enemy_texture, (leo_Rectangle){0, 0, 32, 32}, 
-                                 (leo_Vector2){enemy->x, enemy->y}, LEO_WHITE);
-            }
-        }
     }
 
-    // Draw hero (player) - only if alive
-    if (state->player_alive) {
-        leo_DrawTextureRec(state->hero_texture, (leo_Rectangle){0, 0, 32, 32}, (leo_Vector2){state->player_x, state->player_y}, LEO_WHITE);
-    }
+    // Render all actors
+    leo_actor_system_render(state->actor_system);
 
     leo_EndMode2D();
 
@@ -239,13 +371,22 @@ static void demo_render_ui(leo_GameContext *ctx) {
     leo_DrawFPS(20, 32);
     
     // Death message
-    if (!state->player_alive) {
-        leo_DrawText("YOU DIED! Press R to respawn", 20, 60, 20, LEO_RED);
+    if (state->player_actor) {
+        PlayerData *player_data = (PlayerData *)leo_actor_userdata(state->player_actor);
+        if (!player_data->alive) {
+            leo_DrawText("YOU DIED! Press R to respawn", 20, 60, 20, LEO_RED);
+        }
     }
 }
 
 static void demo_shutdown(leo_GameContext *ctx) {
     ZeldaDemoState *state = (ZeldaDemoState *)ctx->user_data;
+    
+    // Cleanup actor system (this will free all actors and their data)
+    if (state->actor_system) {
+        leo_actor_system_destroy(state->actor_system);
+        state->actor_system = NULL;
+    }
     
     // Cleanup Tiled map
     if (state->map) {
@@ -258,12 +399,8 @@ static void demo_shutdown(leo_GameContext *ctx) {
    Entrypoint
    ---------------------------------------------------------- */
 bool ZeldaDemo(bool oneFrame) {
-    ZeldaDemoState state = {
-        .player_x = 0,
-        .player_y = 0,
-        .player_speed = 150.0f,
-        .one_frame = oneFrame,
-    };
+    ZeldaDemoState state = {0};
+    state.one_frame = oneFrame;
 
     leo_GameConfig cfg = {
         .window_width = 1280,
