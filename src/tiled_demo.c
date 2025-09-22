@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 typedef struct {
     float x, y;
@@ -19,6 +20,14 @@ typedef struct {
     float direction_x, direction_y;
     float change_timer;
 } EnemyData;
+
+typedef struct {
+    float x, y;
+    float vel_x, vel_y;
+    float life;
+    float flash_timer;
+    leo_Color color;
+} Particle;
 
 typedef struct {
     // Camera
@@ -37,6 +46,9 @@ typedef struct {
     leo_ActorSystem *actor_system;
     leo_Actor *player_actor;
 
+    // Particles
+    Particle particles[1000];
+
     // Timing
     double update_time;
     double render_time;
@@ -48,6 +60,77 @@ typedef struct {
 
     bool one_frame;
 } ZeldaDemoState;
+
+/* ----------------------------------------------------------
+   Particle system
+   ---------------------------------------------------------- */
+static leo_Rectangle get_camera_bounds(leo_Camera2D camera);
+
+static void init_particles(ZeldaDemoState *state) {
+    for (int i = 0; i < 1000; i++) {
+        state->particles[i].x = (float)(rand() % (state->map->width * 32));
+        state->particles[i].y = (float)(rand() % (state->map->height * 32));
+        state->particles[i].vel_x = ((float)(rand() % 20) - 10) * 0.3f; // -3 to 3
+        state->particles[i].vel_y = ((float)(rand() % 30) + 20) * 0.5f; // 10 to 25 (falling down)
+        state->particles[i].life = 1.0f;
+        state->particles[i].flash_timer = (float)(rand() % 100) / 10.0f; // Random flash timing
+        
+        // Random leaf colors
+        int color_choice = rand() % 3;
+        if (color_choice == 0) state->particles[i].color = (leo_Color){139, 69, 19, 180}; // Brown
+        else if (color_choice == 1) state->particles[i].color = (leo_Color){255, 215, 0, 180}; // Gold
+        else state->particles[i].color = (leo_Color){255, 140, 0, 180}; // Orange
+    }
+}
+
+static void update_particles(ZeldaDemoState *state, float dt) {
+    for (int i = 0; i < 1000; i++) {
+        Particle *p = &state->particles[i];
+        
+        // Move particle (falling motion)
+        p->x += p->vel_x * dt;
+        p->y += p->vel_y * dt;
+        
+        // Add gentle swaying
+        p->vel_x += sinf(p->y * 0.005f) * 2.0f * dt;
+        
+        // Update flash timer
+        p->flash_timer += dt;
+        
+        // Reset particle when it falls off screen
+        if (p->y > state->map->height * 32.0f + 50) {
+            p->x = (float)(rand() % (state->map->width * 32));
+            p->y = -50.0f;
+            p->vel_x = ((float)(rand() % 20) - 10) * 0.3f;
+            p->vel_y = ((float)(rand() % 30) + 20) * 0.5f;
+            p->flash_timer = (float)(rand() % 100) / 10.0f;
+        }
+        
+        // Wrap horizontally
+        if (p->x < -10) p->x = state->map->width * 32.0f + 10;
+        if (p->x > state->map->width * 32.0f + 10) p->x = -10;
+    }
+}
+
+static void render_particles(ZeldaDemoState *state) {
+    leo_Rectangle cam_bounds = get_camera_bounds(state->camera);
+    
+    for (int i = 0; i < 1000; i++) {
+        Particle *p = &state->particles[i];
+        
+        // Only render particles in camera view
+        if (p->x >= cam_bounds.x - 10 && p->x <= cam_bounds.x + cam_bounds.width + 10 &&
+            p->y >= cam_bounds.y - 10 && p->y <= cam_bounds.y + cam_bounds.height + 10) {
+            
+            // Flash effect - make particles brighter/dimmer
+            float flash = 0.5f + 0.5f * sinf(p->flash_timer * 3.0f);
+            leo_Color flash_color = p->color;
+            flash_color.a = (unsigned char)(flash_color.a * flash);
+            
+            leo_DrawCircle((int)p->x, (int)p->y, 1.5f, flash_color);
+        }
+    }
+}
 
 /* ----------------------------------------------------------
    Timing helpers
@@ -379,6 +462,9 @@ static bool demo_setup(leo_GameContext *ctx) {
     state->camera.rotation = 0.0f;
     state->camera.zoom = 1.0f;
 
+    // Initialize particles
+    init_particles(state);
+
     return true;
 }
 
@@ -418,6 +504,9 @@ static void demo_update(leo_GameContext *ctx) {
 
     // Update all actors
     leo_actor_system_update(state->actor_system, dt);
+
+    // Update particles
+    update_particles(state, dt);
 
     state->update_time = get_time_ms() - start_time;
 
@@ -493,6 +582,9 @@ static void demo_render_ui(leo_GameContext *ctx) {
     leo_actor_system_render(state->actor_system);
     
     state->actor_render_time = get_time_ms() - actor_start;
+
+    // Render particles on top
+    render_particles(state);
 
     leo_EndMode2D();
 
