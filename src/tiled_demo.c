@@ -1,7 +1,6 @@
 #include <leo/leo.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <assert.h>
 
 typedef struct {
     // Player
@@ -47,17 +46,10 @@ static bool demo_setup(leo_GameContext *ctx) {
     // Initialize camera
     int w = leo_GetScreenWidth();
     int h = leo_GetScreenHeight();
-    assert(w > 0 && h > 0);
-    printf("Screen size: %dx%d\n", w, h);
-
     state->camera.target = (leo_Vector2){state->player_x, state->player_y};
     state->camera.offset = (leo_Vector2){w / 2.0f, h / 2.0f}; // True screen center
     state->camera.rotation = 0.0f;
     state->camera.zoom = 1.0f;
-
-    printf("Camera initialized: target=(%.1f, %.1f), offset=(%.1f, %.1f)\n",
-           state->camera.target.x, state->camera.target.y,
-           state->camera.offset.x, state->camera.offset.y);
 
     return true;
 }
@@ -90,28 +82,10 @@ static void demo_update(leo_GameContext *ctx) {
     state->camera.target.x = state->player_x;
     state->camera.target.y = state->player_y;
 
-    // Debug info each frame (throttled to every 60 frames)
-    if (ctx->frame % 60 == 0) {
-        printf("[Frame %lld] Player=(%.1f, %.1f) CameraTarget=(%.1f, %.1f) Offset=(%.1f, %.1f)\n",
-               (long long)ctx->frame,
-               state->player_x, state->player_y,
-               state->camera.target.x, state->camera.target.y,
-               state->camera.offset.x, state->camera.offset.y);
-    }
-
     // Escape hatch (CI/CD)
     if (state->one_frame && ctx->frame >= 1) {
         leo_GameQuit(ctx);
     }
-}
-
-/* ----------------------------------------------------------
-   Helper function to draw sprites in world coordinates
-   ---------------------------------------------------------- */
-static void DrawSpriteWorld(leo_Texture2D tex, float x, float y) {
-    leo_Camera2D cam = leo_GetCurrentCamera2D();
-    leo_Vector2 screenPos = leo_GetWorldToScreen2D((leo_Vector2){x, y}, cam);
-    leo_DrawTextureRec(tex, (leo_Rectangle){0, 0, 32, 32}, screenPos, LEO_WHITE);
 }
 
 /* ----------------------------------------------------------
@@ -121,24 +95,21 @@ static void demo_render_ui(leo_GameContext *ctx) {
     ZeldaDemoState *state = (ZeldaDemoState *)ctx->user_data;
 
     // Begin world render with camera
-    printf("Applying camera: target=(%.1f, %.1f), offset=(%.1f, %.1f)\n", 
-           state->camera.target.x, state->camera.target.y,
-           state->camera.offset.x, state->camera.offset.y);
     leo_BeginMode2D(state->camera);
 
     // Draw background tiles (simple repeated dirt for demo)
     for (int y = -5; y < 20; y++) {
         for (int x = -10; x < 20; x++) {
-            DrawSpriteWorld(state->dirt_texture, x * 32.0f, y * 32.0f);
+            leo_DrawTextureRec(state->dirt_texture, (leo_Rectangle){0, 0, 32, 32}, (leo_Vector2){x * 32.0f, y * 32.0f}, LEO_WHITE);
         }
     }
 
     // Draw hero (player)
-    DrawSpriteWorld(state->hero_texture, state->player_x, state->player_y);
+    leo_DrawTextureRec(state->hero_texture, (leo_Rectangle){0, 0, 32, 32}, (leo_Vector2){state->player_x, state->player_y}, LEO_WHITE);
 
     // Example enemy + tree
-    DrawSpriteWorld(state->tree_texture, 200, 200);
-    DrawSpriteWorld(state->enemy_texture, 300, 150);
+    leo_DrawTextureRec(state->tree_texture, (leo_Rectangle){0, 0, 32, 32}, (leo_Vector2){200, 200}, LEO_WHITE);
+    leo_DrawTextureRec(state->enemy_texture, (leo_Rectangle){0, 0, 32, 32}, (leo_Vector2){300, 150}, LEO_WHITE);
 
     leo_EndMode2D();
 
