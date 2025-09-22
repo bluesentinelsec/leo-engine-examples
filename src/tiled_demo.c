@@ -75,6 +75,17 @@ static void demo_update(leo_GameContext *ctx) {
     if (leo_IsKeyDown(KEY_A)) state->player_x -= state->player_speed * dt;
     if (leo_IsKeyDown(KEY_D)) state->player_x += state->player_speed * dt;
 
+    // Clamp player to world bounds
+    float world_min_x = 0;
+    float world_min_y = 0;
+    float world_max_x = 800;
+    float world_max_y = 600;
+
+    if (state->player_x < world_min_x) state->player_x = world_min_x;
+    if (state->player_y < world_min_y) state->player_y = world_min_y;
+    if (state->player_x > world_max_x) state->player_x = world_max_x;
+    if (state->player_y > world_max_y) state->player_y = world_max_y;
+
     // Camera follows player
     state->camera.target.x = state->player_x;
     state->camera.target.y = state->player_y;
@@ -95,48 +106,39 @@ static void demo_update(leo_GameContext *ctx) {
 }
 
 /* ----------------------------------------------------------
+   Helper function to draw sprites in world coordinates
+   ---------------------------------------------------------- */
+static void DrawSpriteWorld(leo_Texture2D tex, float x, float y) {
+    leo_Camera2D cam = leo_GetCurrentCamera2D();
+    leo_Vector2 screenPos = leo_GetWorldToScreen2D((leo_Vector2){x, y}, cam);
+    leo_DrawTextureRec(tex, (leo_Rectangle){0, 0, 32, 32}, screenPos, LEO_WHITE);
+}
+
+/* ----------------------------------------------------------
    Render world + UI
    ---------------------------------------------------------- */
 static void demo_render_ui(leo_GameContext *ctx) {
     ZeldaDemoState *state = (ZeldaDemoState *)ctx->user_data;
 
     // Begin world render with camera
+    printf("Applying camera: target=(%.1f, %.1f), offset=(%.1f, %.1f)\n", 
+           state->camera.target.x, state->camera.target.y,
+           state->camera.offset.x, state->camera.offset.y);
     leo_BeginMode2D(state->camera);
 
     // Draw background tiles (simple repeated dirt for demo)
     for (int y = -5; y < 20; y++) {
         for (int x = -10; x < 20; x++) {
-            leo_DrawTextureRec(
-                state->dirt_texture,
-                (leo_Rectangle){0, 0, 32, 32},
-                (leo_Vector2){x * 32.0f, y * 32.0f},
-                LEO_WHITE
-            );
+            DrawSpriteWorld(state->dirt_texture, x * 32.0f, y * 32.0f);
         }
     }
 
     // Draw hero (player)
-    leo_DrawTextureRec(
-        state->hero_texture,
-        (leo_Rectangle){0, 0, 32, 32},
-        (leo_Vector2){state->player_x, state->player_y},
-        LEO_WHITE
-    );
+    DrawSpriteWorld(state->hero_texture, state->player_x, state->player_y);
 
     // Example enemy + tree
-    leo_DrawTextureRec(
-        state->tree_texture,
-        (leo_Rectangle){0, 0, 32, 32},
-        (leo_Vector2){200, 200},
-        LEO_WHITE
-    );
-
-    leo_DrawTextureRec(
-        state->enemy_texture,
-        (leo_Rectangle){0, 0, 32, 32},
-        (leo_Vector2){300, 150},
-        LEO_WHITE
-    );
+    DrawSpriteWorld(state->tree_texture, 200, 200);
+    DrawSpriteWorld(state->enemy_texture, 300, 150);
 
     leo_EndMode2D();
 
