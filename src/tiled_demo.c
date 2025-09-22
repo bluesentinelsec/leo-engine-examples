@@ -62,6 +62,7 @@ typedef struct {
     double last_frame_time;
     double collision_time;
 
+    bool fullscreen;
     bool one_frame;
 } ZeldaDemoState;
 
@@ -494,6 +495,13 @@ static bool demo_setup(leo_GameContext *ctx) {
 static void demo_update(leo_GameContext *ctx) {
     ZeldaDemoState *state = (ZeldaDemoState *)ctx->user_data;
     float dt = ctx->dt;
+    
+    // Toggle fullscreen on Tab key release
+    if (leo_IsKeyReleased(KEY_TAB)) {
+        state->fullscreen = !state->fullscreen;
+        leo_SetFullscreen(state->fullscreen);
+        printf("Fullscreen %s\n", state->fullscreen ? "enabled" : "disabled");
+    }
     
     // Measure frame time
     double current_time = get_time_ms();
