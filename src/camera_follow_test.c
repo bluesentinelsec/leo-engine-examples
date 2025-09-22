@@ -48,7 +48,9 @@ static bool demo_setup(leo_GameContext *ctx) {
     
     // Initialize camera
     state->camera.target = (leo_Vector2){400, 300};
-    state->camera.offset = (leo_Vector2){400, 300}; // Screen center
+    int w = leo_GetScreenWidth();
+    int h = leo_GetScreenHeight();
+    state->camera.offset = (leo_Vector2){w / 2.0f, h / 2.0f}; // True screen center
     state->camera.rotation = 0.0f;
     state->camera.zoom = 1.0f;
     
