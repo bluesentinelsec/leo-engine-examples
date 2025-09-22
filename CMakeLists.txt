@@ -74,7 +74,6 @@ set(SOURCE_FILES
         src/audio/audio.c
         src/vfs_demo.c
         src/font_demo.c
-        src/camera2d_demo.c
         src/collision_demo.c
         src/keyboard_demo.c
         src/gamepad_demo.c
@@ -82,7 +81,6 @@ set(SOURCE_FILES
         src/signal_demo.c
         src/actor_demo.c
         src/tiled_demo.c
-        src/camera_follow_test.c
 )
 
 # =========================

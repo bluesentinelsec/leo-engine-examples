@@ -13,7 +13,6 @@ bool GraphicsDemo(bool oneFrame);
 bool AudioDemo(bool oneFrame);
 bool VFSDemo(bool oneFrame);
 bool FontDemo(bool oneFrame);
-bool Camera2DDemo(bool oneFrame);
 bool CollisionDemo(bool oneFrame);
 bool KeyboardDemo(bool oneFrame);
 bool GamepadDemo(bool oneFrame);
@@ -21,7 +20,6 @@ bool AnimationDemo(bool oneFrame);
 bool SignalDemo(bool oneFrame);
 bool ActorDemo(bool oneFrame);
 bool TiledDemo(bool oneFrame);
-bool CameraFollowTest(bool oneFrame);
 
 /* Register demos here */
 Demo gDemos[] = {
@@ -33,7 +31,6 @@ Demo gDemos[] = {
     {"Audio Demo", "How to work with Leo Engine music and sound primitives", AudioDemo},
     {"VFS Demo", "How to work with Leo Engine virtual filesystem", VFSDemo},
     {"Font Demo", "Font rendering", FontDemo},
-    {"Camera 2D Demo", "Top-down camera following player with collision detection", Camera2DDemo},
     {"Collision Demo", "Interactive 2D collision detection with bouncing shapes", CollisionDemo},
     {"Keyboard Demo", "Interactive keyboard input demonstration with visual feedback", KeyboardDemo},
     {"Gamepad Demo", "Interactive gamepad demonstration with visual feedback", GamepadDemo},
@@ -41,7 +38,6 @@ Demo gDemos[] = {
     {"Signal Demo", "Signal system demonstration with interactive connections", SignalDemo},
     {"Actor Demo", "Actor system demonstration with hierarchy and lifecycle", ActorDemo},
     {"Tiled Demo", "Tiled map loading and rendering demonstration", TiledDemo},
-    {"Camera Follow Test", "Simple camera following test with basic graphics", CameraFollowTest},
 };
 
 int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);
