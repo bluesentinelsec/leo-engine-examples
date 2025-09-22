@@ -8,6 +8,10 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#include <direct.h>
+#define getcwd _getcwd
+#else
+#include <unistd.h>
 #endif
 
 typedef struct {
@@ -400,24 +404,77 @@ static leo_ActorVTable enemy_vtable = {
 static bool demo_setup(leo_GameContext *ctx) {
     ZeldaDemoState *state = (ZeldaDemoState *)ctx->user_data;
 
+    printf("=== VFS Setup Debug ===\n");
+    
+    // Print current working directory
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        printf("Current working directory: %s\n", cwd);
+    } else {
+        printf("Failed to get current working directory\n");
+    }
+    
+    printf("Attempting to mount resources.leopack...\n");
+
     // Mount resource pack with password + compression enabled
     if (!leo_MountResourcePack("resources.leopack", "password", 1)) {
         printf("❌ Failed to mount resources.leopack\n");
+        printf("Leo error: %s\n", leo_GetError());
+        
+        // Check if file exists using C functions
+        FILE *test_file = fopen("resources.leopack", "rb");
+        if (test_file) {
+            printf("File exists but mount failed\n");
+            fclose(test_file);
+        } else {
+            printf("File does not exist at current path\n");
+        }
         return false;
     } else {
         printf("✅ Mounted resources.leopack\n");
     }
 
+    printf("=== Loading Textures ===\n");
+    
     // Load textures from VFS
+    printf("Loading dirt_32x32.png...\n");
     state->dirt_texture  = leo_LoadTexture("images/dirt_32x32.png");
+    if (!state->dirt_texture._handle) {
+        printf("❌ Failed to load dirt texture. Leo error: %s\n", leo_GetError());
+    } else {
+        printf("✅ Loaded dirt texture\n");
+    }
+    
+    printf("Loading tree_32x32.png...\n");
     state->tree_texture  = leo_LoadTexture("images/tree_32x32.png");
+    if (!state->tree_texture._handle) {
+        printf("❌ Failed to load tree texture. Leo error: %s\n", leo_GetError());
+    } else {
+        printf("✅ Loaded tree texture\n");
+    }
+    
+    printf("Loading hero_32x32.png...\n");
     state->hero_texture  = leo_LoadTexture("images/hero_32x32.png");
+    if (!state->hero_texture._handle) {
+        printf("❌ Failed to load hero texture. Leo error: %s\n", leo_GetError());
+    } else {
+        printf("✅ Loaded hero texture\n");
+    }
+    
+    printf("Loading enemy_32x32.png...\n");
     state->enemy_texture = leo_LoadTexture("images/enemy_32x32.png");
+    if (!state->enemy_texture._handle) {
+        printf("❌ Failed to load enemy texture. Leo error: %s\n", leo_GetError());
+    } else {
+        printf("✅ Loaded enemy texture\n");
+    }
 
+    printf("=== Loading Tiled Map ===\n");
     // Load Tiled map
+    printf("Loading demo.json...\n");
     state->map = leo_tiled_load("maps/demo.json", NULL);
     if (!state->map) {
-        printf("❌ Failed to load Tiled map\n");
+        printf("❌ Failed to load Tiled map. Leo error: %s\n", leo_GetError());
         return false;
     }
     printf("✅ Loaded Tiled map: %dx%d tiles\n", state->map->width, state->map->height);
