@@ -73,6 +73,17 @@ static void demo_update(leo_GameContext *ctx) {
     if (leo_IsKeyDown(KEY_A)) state->player_x -= state->player_speed * ctx->dt;
     if (leo_IsKeyDown(KEY_D)) state->player_x += state->player_speed * ctx->dt;
     
+    // Clamp player to world bounds (matching the grid size)
+    float world_min_x = -1000;
+    float world_min_y = -1000;
+    float world_max_x = 1000;
+    float world_max_y = 1000;
+    
+    if (state->player_x < world_min_x) state->player_x = world_min_x;
+    if (state->player_y < world_min_y) state->player_y = world_min_y;
+    if (state->player_x > world_max_x) state->player_x = world_max_x;
+    if (state->player_y > world_max_y) state->player_y = world_max_y;
+    
     // Log player movement
     if (old_x != state->player_x || old_y != state->player_y) {
         printf("Player moved: (%.1f,%.1f) -> (%.1f,%.1f)\n", old_x, old_y, state->player_x, state->player_y);
@@ -100,12 +111,12 @@ static void demo_render_ui(leo_GameContext *ctx) {
     // Apply camera transform to world rendering
     leo_BeginMode2D(state->camera);
     
-    // Draw world grid
-    for (int x = -1000; x <= 1000; x += 100) {
-        leo_DrawLine(x, -1000, x, 1000, LEO_GRAY);
+    // Draw world grid (extended to cover full world bounds)
+    for (int x = -1100; x <= 1100; x += 100) {
+        leo_DrawLine(x, -1100, x, 1100, LEO_GRAY);
     }
-    for (int y = -1000; y <= 1000; y += 100) {
-        leo_DrawLine(-1000, y, 1000, y, LEO_GRAY);
+    for (int y = -1100; y <= 1100; y += 100) {
+        leo_DrawLine(-1100, y, 1100, y, LEO_GRAY);
     }
     
     // Draw test textures at FIXED world positions near camera spawn (400, 300)
