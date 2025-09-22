@@ -8,6 +8,12 @@
 
 #include "win_dll_dirs.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 static void print_help(const char *program_name)
 {
     printf("Leo Engine Showcase — run example demos and games\n");
@@ -34,6 +40,8 @@ int main(int argc, char *argv[])
 {
 #ifdef _WIN32
     leo_init_windows_dll_search();
+        // Tell Windows console to use UTF-8
+    SetConsoleOutputCP(CP_UTF8);
 #endif
 
     int option_index = 0;

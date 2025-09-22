@@ -6,6 +6,10 @@
 #include <time.h>
 #include <math.h>
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
 typedef struct {
     float x, y;
     float spawn_x, spawn_y;
@@ -136,10 +140,25 @@ static void render_particles(ZeldaDemoState *state) {
    Timing helpers
    ---------------------------------------------------------- */
 static double get_time_ms(void) {
+#if defined(_WIN32)
+    static LARGE_INTEGER freq;
+    static BOOL freq_set = FALSE;
+    LARGE_INTEGER counter;
+
+    if (!freq_set) {
+        QueryPerformanceFrequency(&freq);
+        freq_set = TRUE;
+    }
+
+    QueryPerformanceCounter(&counter);
+    return (double)counter.QuadPart * 1000.0 / (double)freq.QuadPart;
+#else
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return ts.tv_sec * 1000.0 + ts.tv_nsec / 1000000.0;
+#endif
 }
+
 
 /* ----------------------------------------------------------
    Culling helpers
@@ -384,8 +403,9 @@ static bool demo_setup(leo_GameContext *ctx) {
     if (!leo_MountResourcePack("resources.leopack", "password", 1)) {
         printf("❌ Failed to mount resources.leopack\n");
         return false;
+    } else {
+        printf("✅ Mounted resources.leopack\n");
     }
-    printf("✅ Mounted resources.leopack\n");
 
     // Load textures from VFS
     state->dirt_texture  = leo_LoadTexture("images/dirt_32x32.png");
