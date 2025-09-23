@@ -59,6 +59,5 @@ dkms.conf
 .DS_Store
 build
 cmake-build-debug
-resources.leopack
 .venv
 venv
