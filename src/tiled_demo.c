@@ -543,6 +543,8 @@ static bool demo_setup(leo_GameContext *ctx) {
     // Initialize particles
     init_particles(state);
 
+    leo_SetFullscreen(true);
+
     return true;
 }
 

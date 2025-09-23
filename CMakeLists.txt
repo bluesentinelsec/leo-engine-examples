@@ -112,6 +112,7 @@ if (EMSCRIPTEN)
 else()
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
     target_link_libraries(${PROJECT_NAME} PRIVATE Leo::Runtime)
+    
     # Link math library for Unix (non-Apple, non-Emscripten) to fix cos/sin linker errors
     if (UNIX AND NOT APPLE)
         target_link_libraries(${PROJECT_NAME} PRIVATE m)
@@ -127,6 +128,12 @@ else()
         target_link_libraries(${PROJECT_NAME} PRIVATE delayimp)
         target_compile_definitions(${PROJECT_NAME} PRIVATE LEO_WIN_DELAYLOAD=1)
     endif ()
+
+    if (WIN32 AND MSVC)
+        if (CMAKE_BUILD_TYPE STREQUAL "Release")
+            set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+        endif()
+    endif()
 
     set_target_properties(${PROJECT_NAME} PROPERTIES
             BUILD_WITH_INSTALL_RPATH TRUE

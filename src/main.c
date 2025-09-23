@@ -150,3 +150,19 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+#if defined(_WIN32)
+// -------------------------
+// WinMain shim for GUI builds
+// -------------------------
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                     LPSTR lpCmdLine, int nCmdShow)
+{
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nCmdShow;
+
+    return main(__argc, __argv);
+}
+#endif
