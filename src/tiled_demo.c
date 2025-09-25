@@ -317,9 +317,14 @@ static void player_render(leo_Actor *self) {
     }
 }
 
+static void player_exit(leo_Actor *self) {
+    free(leo_actor_userdata(self));
+}
+
 static leo_ActorVTable player_vtable = {
     .on_update = player_update,
     .on_render = player_render,
+    .on_exit = player_exit,
 };
 
 /* ----------------------------------------------------------
@@ -393,9 +398,14 @@ static void enemy_render(leo_Actor *self) {
     }
 }
 
+static void enemy_exit(leo_Actor *self) {
+    free(leo_actor_userdata(self));
+}
+
 static leo_ActorVTable enemy_vtable = {
     .on_update = enemy_update,
     .on_render = enemy_render,
+    .on_exit = enemy_exit,
 };
 
 /* ----------------------------------------------------------
