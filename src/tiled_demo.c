@@ -66,6 +66,13 @@ typedef struct {
     double last_frame_time;
     double collision_time;
 
+    // Simple fade system
+    bool fading;
+    bool fade_in;  // true = fade in, false = fade out
+    float fade_progress;
+    float fade_duration;
+    bool quit_after_fade;  // Flag to quit after fade completes
+
     bool fullscreen;
     bool one_frame;
 } ZeldaDemoState;
@@ -555,6 +562,15 @@ static bool demo_setup(leo_GameContext *ctx) {
 
     leo_SetFullscreen(true);
 
+    // Disable automatic ESCAPE key exit so we can handle it ourselves
+    leo_SetExitKey(-1);
+
+    // Start fade-in
+    state->fading = true;
+    state->fade_in = true;
+    state->fade_progress = 0.0f;
+    state->fade_duration = 1.5f;
+
     return true;
 }
 
@@ -564,6 +580,29 @@ static bool demo_setup(leo_GameContext *ctx) {
 static void demo_update(leo_GameContext *ctx) {
     ZeldaDemoState *state = (ZeldaDemoState *)ctx->user_data;
     float dt = ctx->dt;
+    
+    // Update fade
+    if (state->fading) {
+        state->fade_progress += dt / state->fade_duration;
+        if (state->fade_progress >= 1.0f) {
+            state->fade_progress = 1.0f;
+            state->fading = false;
+            
+            // If fade-out completed, quit now
+            if (state->quit_after_fade) {
+                leo_GameQuit(ctx);
+            }
+        }
+    }
+    
+    // Handle ESCAPE key for fade-out and quit
+    if (leo_IsKeyPressed(KEY_ESCAPE) && !state->fading) {
+        state->fading = true;
+        state->fade_in = false;
+        state->fade_progress = 0.0f;
+        state->fade_duration = 1.0f;
+        state->quit_after_fade = true;  // Set flag to quit after fade completes
+    }
     
     // Toggle fullscreen on Tab key release
     if (leo_IsKeyReleased(KEY_TAB)) {
@@ -716,6 +755,22 @@ static void demo_render_ui(leo_GameContext *ctx) {
         if (!player_data->alive) {
             leo_DrawText("YOU DIED! Press R to respawn", 20, 190, 20, LEO_RED);
         }
+    }
+    
+    // Render fade overlay
+    if (state->fading) {
+        float alpha;
+        if (state->fade_in) {
+            // Fade-in: start opaque, fade to transparent
+            alpha = 1.0f - state->fade_progress;
+        } else {
+            // Fade-out: start transparent, fade to opaque
+            alpha = state->fade_progress;
+        }
+        
+        leo_Color fade_color = LEO_WHITE;
+        fade_color.a = (unsigned char)(255 * alpha);
+        leo_DrawRectangle(0, 0, leo_GetScreenWidth(), leo_GetScreenHeight(), fade_color);
     }
 }
 
