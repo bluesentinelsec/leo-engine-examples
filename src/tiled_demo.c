@@ -768,7 +768,7 @@ static void demo_render_ui(leo_GameContext *ctx) {
             alpha = state->fade_progress;
         }
         
-        leo_Color fade_color = LEO_WHITE;
+        leo_Color fade_color = LEO_BLACK;
         fade_color.a = (unsigned char)(255 * alpha);
         leo_DrawRectangle(0, 0, leo_GetScreenWidth(), leo_GetScreenHeight(), fade_color);
     }
