@@ -20,6 +20,7 @@ bool AnimationDemo(bool oneFrame);
 bool SignalDemo(bool oneFrame);
 bool ActorDemo(bool oneFrame);
 bool TiledDemo(bool oneFrame);
+bool ShapesDemo(bool oneFrame);
 
 /* Register demos here */
 Demo gDemos[] = {
@@ -38,6 +39,7 @@ Demo gDemos[] = {
     {"Signal Demo", "Signal system demonstration with interactive connections", SignalDemo},
     {"Actor Demo", "Actor system demonstration with hierarchy and lifecycle", ActorDemo},
     {"Tiled Demo", "Tiled map loading and rendering demonstration", TiledDemo},
+    {"Shapes Demo", "New shape drawing functions showcase with animations", ShapesDemo},
 };
 
 int gNumDemos = sizeof(gDemos) / sizeof(gDemos[0]);
