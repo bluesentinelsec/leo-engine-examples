@@ -116,160 +116,441 @@ static void demo_render_ui(leo_GameContext *ctx)
 
     switch (state->shape_mode)
     {
-        case 0: // Filled shapes showcase
+        case 0: // Filled shapes showcase - SPECTACULAR!
         {
-            // Animated filled circle - smoother pulsing
-            float radius = 80 + 15 * sinf(t * 1.5f);
-            leo_Color circleColor = {255, 120 + (int)(30 * sinf(t * 0.8f)), 100, 255};
-            leo_DrawCircleFilled(centerX - 200, centerY - 100, radius, circleColor);
-
-            // Rotating filled triangle - slower rotation
-            float angle = t * 1.0f;
-            int size = 60;
-            int x1 = centerX + (int)(size * cosf(angle));
-            int y1 = centerY - 100 + (int)(size * sinf(angle));
-            int x2 = centerX + (int)(size * cosf(angle + 2.094f)); // 120 degrees
-            int y2 = centerY - 100 + (int)(size * sinf(angle + 2.094f));
-            int x3 = centerX + (int)(size * cosf(angle + 4.188f)); // 240 degrees
-            int y3 = centerY - 100 + (int)(size * sinf(angle + 4.188f));
-            
-            leo_Color triangleColor = {100, 255, 150, 255};
-            leo_DrawTriangleFilled(x1, y1, x2, y2, x3, y3, triangleColor);
-
-            // Animated filled polygon (hexagon) - gentler pulsing
-            int hexPoints[12];
-            int hexRadius = 50 + (int)(10 * sinf(t * 2.0f));
-            for (int i = 0; i < 6; i++)
+            // Multiple pulsing circles with trails
+            for (int i = 0; i < 12; i++)
             {
-                float hexAngle = (float)i * 1.047f + t * 0.5f; // 60 degrees per side, slower rotation
-                hexPoints[i * 2] = centerX + 200 + (int)(hexRadius * cosf(hexAngle));
-                hexPoints[i * 2 + 1] = centerY - 100 + (int)(hexRadius * sinf(hexAngle));
-            }
-            leo_Color hexColor = {255, 200, 100, 200};
-            leo_DrawPolyFilled(hexPoints, 6, hexColor);
-
-            // Static filled rectangle with outline
-            leo_DrawRectangle(centerX - 60, centerY + 50, 120, 80, (leo_Color){50, 150, 255, 255});
-            leo_DrawRectangleLines(centerX - 60, centerY + 50, 120, 80, (leo_Color){255, 255, 255, 255});
-            break;
-        }
-
-        case 1: // Outline shapes showcase
-        {
-            // Multiple concentric circles
-            for (int i = 1; i <= 5; i++)
-            {
-                float radius = i * 25.0f;
-                leo_Color color = {255 - i * 40, 100 + i * 30, 255, 255};
-                leo_DrawCircle(centerX - 200, centerY, radius, color);
-            }
-
-            // Triangle outline with animated vertices
-            int tri1X = centerX + (int)(80 * cosf(t));
-            int tri1Y = centerY - 50 + (int)(30 * sinf(t * 2.0f));
-            int tri2X = centerX + 80;
-            int tri2Y = centerY + 50;
-            int tri3X = centerX - 80;
-            int tri3Y = centerY + 50;
-            leo_DrawTriangle(tri1X, tri1Y, tri2X, tri2Y, tri3X, tri3Y, (leo_Color){255, 255, 100, 255});
-
-            // Polygon outline (star shape)
-            int starPoints[10];
-            for (int i = 0; i < 5; i++)
-            {
-                float outerAngle = (float)i * 1.256f + t * 0.5f; // 72 degrees
-                float innerAngle = outerAngle + 0.628f; // 36 degrees offset
+                float angle = (float)i * 0.524f + t * 0.8f; // 30 degrees apart
+                float radius = 60 + 30 * sinf(t * 2.0f + (float)i * 0.5f);
+                int x = centerX - 300 + (int)(120 * cosf(angle));
+                int y = centerY - 100 + (int)(80 * sinf(angle));
                 
-                starPoints[i * 4] = centerX + 200 + (int)(60 * cosf(outerAngle));
-                starPoints[i * 4 + 1] = centerY + (int)(60 * sinf(outerAngle));
-                starPoints[i * 4 + 2] = centerX + 200 + (int)(25 * cosf(innerAngle));
-                starPoints[i * 4 + 3] = centerY + (int)(25 * sinf(innerAngle));
+                leo_Color color = {
+                    (int)(255 * (0.5f + 0.5f * sinf(t + (float)i))),
+                    (int)(255 * (0.5f + 0.5f * cosf(t * 1.3f + (float)i))),
+                    255,
+                    180
+                };
+                leo_DrawCircleFilled(x, y, radius, color);
             }
-            // Rearrange for proper star drawing
-            int orderedStar[10];
-            for (int i = 0; i < 5; i++)
-            {
-                orderedStar[i * 2] = starPoints[i * 4];
-                orderedStar[i * 2 + 1] = starPoints[i * 4 + 1];
-            }
-            leo_DrawPoly(orderedStar, 5, (leo_Color){255, 150, 150, 255});
 
-            // Rectangle outlines of different sizes
-            for (int i = 0; i < 3; i++)
+            // Rotating triangle constellation
+            for (int layer = 0; layer < 3; layer++)
             {
-                int size = 40 + i * 20;
-                leo_Color rectColor = {100 + i * 50, 255 - i * 50, 100, 255};
-                leo_DrawRectangleLines(centerX - size/2, centerY + 100 + i * 10, size, size/2, rectColor);
+                float layerAngle = t * (1.0f + layer * 0.3f);
+                int layerSize = 40 + layer * 20;
+                int layerRadius = 80 + layer * 40;
+                
+                for (int i = 0; i < 6; i++)
+                {
+                    float angle = (float)i * 1.047f + layerAngle; // 60 degrees
+                    int cx = centerX + (int)(layerRadius * cosf(angle));
+                    int cy = centerY - 100 + (int)(layerRadius * sinf(angle));
+                    
+                    int x1 = cx + (int)(layerSize * cosf(angle));
+                    int y1 = cy + (int)(layerSize * sinf(angle));
+                    int x2 = cx + (int)(layerSize * cosf(angle + 2.094f));
+                    int y2 = cy + (int)(layerSize * sinf(angle + 2.094f));
+                    int x3 = cx + (int)(layerSize * cosf(angle + 4.188f));
+                    int y3 = cy + (int)(layerSize * sinf(angle + 4.188f));
+                    
+                    leo_Color color = {
+                        100 + layer * 50,
+                        255 - layer * 60,
+                        150 + layer * 30,
+                        200 - layer * 40
+                    };
+                    leo_DrawTriangleFilled(x1, y1, x2, y2, x3, y3, color);
+                }
             }
-            break;
-        }
 
-        case 2: // Mixed shapes animation
-        {
-            // Orbiting filled circles - slower, smoother movement
+            // Morphing polygon garden
             for (int i = 0; i < 8; i++)
             {
-                float angle = (float)i * 0.785f + t * 0.8f; // 45 degrees apart, slower orbit
-                int orbitRadius = 150;
-                int x = centerX + (int)(orbitRadius * cosf(angle));
-                int y = centerY + (int)(orbitRadius * sinf(angle));
+                float baseAngle = (float)i * 0.785f; // 45 degrees
+                int baseX = centerX + 200 + (int)(150 * cosf(baseAngle));
+                int baseY = centerY - 100 + (int)(100 * sinf(baseAngle));
                 
-                // Gentler color transitions
+                int sides = 3 + (int)(3 * (0.5f + 0.5f * sinf(t * 2.0f + (float)i)));
+                int polyPoints[16]; // Max 8 sides = 16 coordinates
+                
+                int radius = 30 + (int)(20 * sinf(t * 3.0f + (float)i));
+                for (int j = 0; j < sides; j++)
+                {
+                    float polyAngle = (float)j * (6.283f / (float)sides) + t * 0.5f;
+                    polyPoints[j * 2] = baseX + (int)(radius * cosf(polyAngle));
+                    polyPoints[j * 2 + 1] = baseY + (int)(radius * sinf(polyAngle));
+                }
+                
                 leo_Color color = {
-                    (int)(128 + 80 * sinf(angle * 0.5f)),
-                    (int)(128 + 80 * cosf(angle * 0.5f)),
-                    255,
-                    200
+                    (int)(255 * (0.3f + 0.7f * sinf(t + (float)i * 0.7f))),
+                    (int)(255 * (0.3f + 0.7f * cosf(t * 1.1f + (float)i * 0.7f))),
+                    (int)(255 * (0.3f + 0.7f * sinf(t * 0.8f + (float)i * 0.7f))),
+                    160
                 };
-                leo_DrawCircleFilled(x, y, 15, color);
+                leo_DrawPolyFilled(polyPoints, sides, color);
             }
 
-            // Central pulsing triangle - gentler pulsing
-            float pulseSize = 40 + 15 * sinf(t * 2.5f);
-            leo_DrawTriangleFilled(
-                centerX, centerY - (int)pulseSize,
-                centerX - (int)pulseSize, centerY + (int)pulseSize,
-                centerX + (int)pulseSize, centerY + (int)pulseSize,
-                (leo_Color){255, 255, 255, 180}
-            );
+            // Cascading rectangles
+            for (int i = 0; i < 15; i++)
+            {
+                float cascade = t * 2.0f + (float)i * 0.3f;
+                int x = centerX - 60 + (int)(i * 8 * sinf(cascade));
+                int y = centerY + 50 + i * 6;
+                int w = 120 - i * 4;
+                int h = 80 - i * 3;
+                
+                leo_Color fillColor = {
+                    50 + i * 10,
+                    150 + (int)(50 * sinf(cascade)),
+                    255 - i * 8,
+                    255 - i * 15
+                };
+                leo_Color lineColor = {255, 255, 255, 100 + i * 8};
+                
+                leo_DrawRectangle(x, y, w, h, fillColor);
+                leo_DrawRectangleLines(x, y, w, h, lineColor);
+            }
             break;
         }
 
-        case 3: // Stress test - many shapes
+        case 1: // Outline shapes showcase - GEOMETRIC MADNESS!
         {
-            // Grid of small shapes with smoother animations
-            for (int x = 0; x < 20; x++)
+            // Concentric circle waves
+            for (int wave = 0; wave < 3; wave++)
             {
-                for (int y = 0; y < 12; y++)
+                int waveX = centerX - 400 + wave * 200;
+                for (int i = 1; i <= 12; i++)
                 {
-                    int posX = centerX - 600 + x * 60;
-                    int posY = centerY - 330 + y * 55;
-                    
-                    // Slower, smoother color transitions
-                    float phase = (float)(x + y) * 0.2f + t * 0.3f;
+                    float radius = i * 15.0f + 20 * sinf(t * 2.0f + (float)i * 0.3f + (float)wave);
                     leo_Color color = {
-                        (int)(128 + 64 * sinf(phase)),
-                        (int)(128 + 64 * cosf(phase * 0.7f)),
-                        (int)(128 + 64 * sinf(phase * 0.5f)),
-                        255
+                        (int)(255 * (0.4f + 0.6f * sinf(t + (float)i * 0.2f + (float)wave))),
+                        100 + i * 12 + wave * 30,
+                        255 - i * 15,
+                        200
+                    };
+                    leo_DrawCircle(waveX, centerY, radius, color);
+                }
+            }
+
+            // Dancing triangle swarm
+            for (int i = 0; i < 20; i++)
+            {
+                float swarmAngle = (float)i * 0.314f + t * 1.5f;
+                float distance = 100 + 50 * sinf(t * 2.0f + (float)i * 0.4f);
+                int swarmX = centerX + (int)(distance * cosf(swarmAngle));
+                int swarmY = centerY + (int)(distance * sinf(swarmAngle));
+                
+                float triAngle = t * 3.0f + (float)i;
+                int size = 20 + (int)(15 * sinf(t * 4.0f + (float)i));
+                
+                int x1 = swarmX + (int)(size * cosf(triAngle));
+                int y1 = swarmY + (int)(size * sinf(triAngle));
+                int x2 = swarmX + (int)(size * cosf(triAngle + 2.094f));
+                int y2 = swarmY + (int)(size * sinf(triAngle + 2.094f));
+                int x3 = swarmX + (int)(size * cosf(triAngle + 4.188f));
+                int y3 = swarmY + (int)(size * sinf(triAngle + 4.188f));
+                
+                leo_Color color = {
+                    255,
+                    (int)(255 * (0.3f + 0.7f * sinf(t + (float)i * 0.5f))),
+                    100 + (int)(100 * cosf(t * 1.2f + (float)i * 0.5f)),
+                    180
+                };
+                leo_DrawTriangle(x1, y1, x2, y2, x3, y3, color);
+            }
+
+            // Polygon kaleidoscope
+            for (int layer = 0; layer < 4; layer++)
+            {
+                int sides = 5 + layer;
+                float layerAngle = t * (0.5f + layer * 0.2f);
+                int layerRadius = 80 + layer * 30;
+                
+                for (int copy = 0; copy < 6; copy++)
+                {
+                    float copyAngle = (float)copy * 1.047f; // 60 degrees
+                    int copyX = centerX + 300 + (int)(100 * cosf(copyAngle));
+                    int copyY = centerY + (int)(100 * sinf(copyAngle));
+                    
+                    int polyPoints[16];
+                    for (int i = 0; i < sides; i++)
+                    {
+                        float angle = (float)i * (6.283f / (float)sides) + layerAngle;
+                        polyPoints[i * 2] = copyX + (int)(layerRadius * cosf(angle));
+                        polyPoints[i * 2 + 1] = copyY + (int)(layerRadius * sinf(angle));
+                    }
+                    
+                    leo_Color color = {
+                        255 - layer * 40 - copy * 20,
+                        150 + layer * 20,
+                        255 - copy * 30,
+                        150 - layer * 20
+                    };
+                    leo_DrawPoly(polyPoints, sides, color);
+                }
+            }
+
+            // Rectangle spiral
+            for (int i = 0; i < 25; i++)
+            {
+                float spiralAngle = (float)i * 0.5f + t;
+                int spiralRadius = i * 8;
+                int spiralX = centerX + (int)(spiralRadius * cosf(spiralAngle));
+                int spiralY = centerY + 200 + (int)(spiralRadius * sinf(spiralAngle));
+                
+                int size = 30 - i;
+                if (size > 5)
+                {
+                    leo_Color color = {
+                        100 + i * 6,
+                        255 - i * 8,
+                        100 + (int)(100 * sinf(t + (float)i * 0.3f)),
+                        255 - i * 8
+                    };
+                    leo_DrawRectangleLines(spiralX - size/2, spiralY - size/2, size, size, color);
+                }
+            }
+            break;
+        }
+
+        case 2: // Mixed shapes animation - PARTICLE EXPLOSION!
+        {
+            // Multi-layer orbital system
+            for (int layer = 0; layer < 4; layer++)
+            {
+                int numOrbiters = 6 + layer * 2;
+                float layerSpeed = 0.8f + layer * 0.3f;
+                int layerRadius = 100 + layer * 50;
+                
+                for (int i = 0; i < numOrbiters; i++)
+                {
+                    float angle = (float)i * (6.283f / (float)numOrbiters) + t * layerSpeed;
+                    int x = centerX + (int)(layerRadius * cosf(angle));
+                    int y = centerY + (int)(layerRadius * sinf(angle));
+                    
+                    // Orbiting circles with trails
+                    int size = 8 + layer * 4 + (int)(6 * sinf(t * 3.0f + angle));
+                    leo_Color color = {
+                        (int)(255 * (0.4f + 0.6f * sinf(angle + t))),
+                        (int)(255 * (0.4f + 0.6f * cosf(angle * 1.3f + t))),
+                        255 - layer * 40,
+                        200 - layer * 30
+                    };
+                    leo_DrawCircleFilled(x, y, size, color);
+                    
+                    // Add trailing triangles
+                    if (layer % 2 == 0)
+                    {
+                        float trailAngle = angle + 3.14159f; // Opposite direction
+                        int tx = x + (int)(20 * cosf(trailAngle));
+                        int ty = y + (int)(20 * sinf(trailAngle));
+                        int tsize = size / 2;
+                        
+                        int tx1 = tx + (int)(tsize * cosf(trailAngle));
+                        int ty1 = ty + (int)(tsize * sinf(trailAngle));
+                        int tx2 = tx + (int)(tsize * cosf(trailAngle + 2.094f));
+                        int ty2 = ty + (int)(tsize * sinf(trailAngle + 2.094f));
+                        int tx3 = tx + (int)(tsize * cosf(trailAngle + 4.188f));
+                        int ty3 = ty + (int)(tsize * sinf(trailAngle + 4.188f));
+                        
+                        leo_Color trailColor = color;
+                        trailColor.a = 100;
+                        leo_DrawTriangleFilled(tx1, ty1, tx2, ty2, tx3, ty3, trailColor);
+                    }
+                }
+            }
+
+            // Central pulsing polygon morphing
+            int sides = 3 + (int)(5 * (0.5f + 0.5f * sinf(t * 1.5f)));
+            float pulseSize = 60 + 40 * sinf(t * 2.5f);
+            int morphPoints[16];
+            
+            for (int i = 0; i < sides; i++)
+            {
+                float angle = (float)i * (6.283f / (float)sides) + t;
+                float radius = pulseSize + 20 * sinf(t * 4.0f + (float)i);
+                morphPoints[i * 2] = centerX + (int)(radius * cosf(angle));
+                morphPoints[i * 2 + 1] = centerY + (int)(radius * sinf(angle));
+            }
+            
+            leo_Color morphColor = {
+                (int)(255 * (0.6f + 0.4f * sinf(t * 2.0f))),
+                (int)(255 * (0.6f + 0.4f * cosf(t * 1.7f))),
+                (int)(255 * (0.6f + 0.4f * sinf(t * 2.3f))),
+                180
+            };
+            leo_DrawPolyFilled(morphPoints, sides, morphColor);
+            
+            // Outline version for extra effect
+            morphColor.a = 255;
+            leo_DrawPoly(morphPoints, sides, morphColor);
+
+            // Particle burst system
+            for (int burst = 0; burst < 3; burst++)
+            {
+                float burstTime = fmodf(t + (float)burst * 2.0f, 6.0f);
+                if (burstTime < 3.0f)
+                {
+                    int burstX = centerX + (burst - 1) * 200;
+                    int burstY = centerY - 150;
+                    
+                    for (int p = 0; p < 30; p++)
+                    {
+                        float particleAngle = (float)p * 0.209f; // ~12 degrees
+                        float particleSpeed = 50 + (float)p * 3;
+                        float particleDistance = particleSpeed * burstTime;
+                        
+                        int px = burstX + (int)(particleDistance * cosf(particleAngle));
+                        int py = burstY + (int)(particleDistance * sinf(particleAngle));
+                        
+                        float life = 1.0f - (burstTime / 3.0f);
+                        int size = (int)(8 * life);
+                        
+                        if (size > 1)
+                        {
+                            leo_Color pColor = {
+                                (int)(255 * life),
+                                (int)(255 * life * (0.5f + 0.5f * sinf((float)p))),
+                                (int)(255 * life * (0.5f + 0.5f * cosf((float)p))),
+                                (int)(255 * life)
+                            };
+                            
+                            if (p % 3 == 0)
+                                leo_DrawCircleFilled(px, py, size, pColor);
+                            else if (p % 3 == 1)
+                                leo_DrawRectangle(px - size, py - size, size * 2, size * 2, pColor);
+                            else
+                            {
+                                int tx1 = px, ty1 = py - size;
+                                int tx2 = px - size, ty2 = py + size;
+                                int tx3 = px + size, ty3 = py + size;
+                                leo_DrawTriangleFilled(tx1, ty1, tx2, ty2, tx3, ty3, pColor);
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        }
+
+        case 3: // Stress test - ABSOLUTE CHAOS!
+        {
+            // Massive grid of animated shapes
+            for (int x = 0; x < 30; x++)
+            {
+                for (int y = 0; y < 20; y++)
+                {
+                    int posX = centerX - 900 + x * 60;
+                    int posY = centerY - 600 + y * 60;
+                    
+                    // Wave-based animation
+                    float wave = sinf(t * 2.0f + (float)x * 0.2f + (float)y * 0.15f);
+                    float phase = (float)(x + y) * 0.1f + t * 0.5f;
+                    
+                    // Dynamic colors
+                    leo_Color color = {
+                        (int)(128 + 127 * sinf(phase)),
+                        (int)(128 + 127 * cosf(phase * 1.3f)),
+                        (int)(128 + 127 * sinf(phase * 0.7f + wave)),
+                        200 + (int)(55 * wave)
                     };
 
-                    int shapeType = (x + y) % 4;
+                    // Size variation
+                    int baseSize = 8 + (int)(6 * wave);
+                    
+                    int shapeType = (x * 7 + y * 11) % 6; // More variety
                     switch (shapeType)
                     {
                         case 0:
-                            leo_DrawCircleFilled(posX, posY, 12, color);
+                            leo_DrawCircleFilled(posX, posY, baseSize, color);
                             break;
                         case 1:
-                            leo_DrawRectangle(posX - 8, posY - 8, 16, 16, color);
+                            leo_DrawRectangle(posX - baseSize, posY - baseSize, baseSize * 2, baseSize * 2, color);
                             break;
                         case 2:
-                            leo_DrawTriangleFilled(posX, posY - 10, posX - 8, posY + 6, posX + 8, posY + 6, color);
+                            leo_DrawTriangleFilled(posX, posY - baseSize, posX - baseSize, posY + baseSize, posX + baseSize, posY + baseSize, color);
                             break;
                         case 3:
-                            leo_DrawRectangleLines(posX - 10, posY - 10, 20, 20, color);
+                            leo_DrawRectangleLines(posX - baseSize, posY - baseSize, baseSize * 2, baseSize * 2, color);
+                            break;
+                        case 4:
+                            leo_DrawCircle(posX, posY, baseSize, color);
+                            break;
+                        case 5:
+                            leo_DrawTriangle(posX, posY - baseSize, posX - baseSize, posY + baseSize, posX + baseSize, posY + baseSize, color);
                             break;
                     }
+                }
+            }
+
+            // Overlay: Massive rotating polygons
+            for (int layer = 0; layer < 5; layer++)
+            {
+                int sides = 6 + layer;
+                float layerAngle = t * (0.3f + layer * 0.1f);
+                int layerRadius = 200 + layer * 100;
+                
+                for (int copy = 0; copy < 3; copy++)
+                {
+                    float copyAngle = (float)copy * 2.094f; // 120 degrees
+                    int copyX = centerX + (int)(300 * cosf(copyAngle));
+                    int copyY = centerY + (int)(200 * sinf(copyAngle));
+                    
+                    int polyPoints[16];
+                    for (int i = 0; i < sides; i++)
+                    {
+                        float angle = (float)i * (6.283f / (float)sides) + layerAngle;
+                        polyPoints[i * 2] = copyX + (int)(layerRadius * cosf(angle));
+                        polyPoints[i * 2 + 1] = copyY + (int)(layerRadius * sinf(angle));
+                    }
+                    
+                    leo_Color color = {
+                        255 - layer * 30,
+                        100 + layer * 30,
+                        255 - copy * 60,
+                        80 - layer * 10
+                    };
+                    leo_DrawPoly(polyPoints, sides, color);
+                }
+            }
+
+            // Chaos mode: Random shapes everywhere
+            for (int chaos = 0; chaos < 100; chaos++)
+            {
+                // Pseudo-random based on time and index
+                float seed = t * 0.1f + (float)chaos * 0.37f;
+                float randX = sinf(seed * 7.13f) * 800;
+                float randY = cosf(seed * 5.79f) * 400;
+                float randSize = 5 + 15 * (0.5f + 0.5f * sinf(seed * 3.21f));
+                
+                int x = centerX + (int)randX;
+                int y = centerY + (int)randY;
+                int size = (int)randSize;
+                
+                leo_Color chaosColor = {
+                    (int)(255 * (0.5f + 0.5f * sinf(seed * 2.1f))),
+                    (int)(255 * (0.5f + 0.5f * cosf(seed * 1.7f))),
+                    (int)(255 * (0.5f + 0.5f * sinf(seed * 2.9f))),
+                    100 + (int)(100 * (0.5f + 0.5f * sinf(seed)))
+                };
+                
+                int chaosType = (int)(sinf(seed * 4.33f) * 3 + 3) % 4;
+                switch (chaosType)
+                {
+                    case 0:
+                        leo_DrawCircleFilled(x, y, size, chaosColor);
+                        break;
+                    case 1:
+                        leo_DrawRectangle(x - size, y - size, size * 2, size * 2, chaosColor);
+                        break;
+                    case 2:
+                        leo_DrawTriangleFilled(x, y - size, x - size, y + size, x + size, y + size, chaosColor);
+                        break;
+                    case 3:
+                        leo_DrawRectangleLines(x - size, y - size, size * 2, size * 2, chaosColor);
+                        break;
                 }
             }
             break;
@@ -301,7 +582,7 @@ static void demo_render_ui(leo_GameContext *ctx)
     leo_DrawText("R: Reset camera", 20, 160, 20, LEO_WHITE);
     
     // Current mode
-    const char* modeNames[] = {"Filled Shapes", "Outline Shapes", "Animation", "Stress Test"};
+    const char* modeNames[] = {"Spectacular Fills", "Geometric Madness", "Particle Explosion", "Absolute Chaos"};
     char modeText[64];
     snprintf(modeText, sizeof(modeText), "Mode: %s", modeNames[state->shape_mode]);
     leo_DrawText(modeText, 20, 190, 20, LEO_YELLOW);
