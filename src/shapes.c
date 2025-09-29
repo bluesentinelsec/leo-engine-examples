@@ -101,11 +101,12 @@ static void demo_update(leo_GameContext *ctx)
     {
         leo_GameQuit(ctx);
     }
+}
 
-    // RENDERING HAPPENS HERE
-    leo_BeginDrawing();
-    leo_ClearBackground(20, 20, 30, 255);
-
+static void demo_render_ui(leo_GameContext *ctx)
+{
+    ShapesState *state = (ShapesState *)ctx->user_data;
+    
     // Begin camera mode for world rendering
     leo_BeginMode2D(state->camera);
 
@@ -288,14 +289,8 @@ static void demo_update(leo_GameContext *ctx)
 
     // End camera mode
     leo_EndMode2D();
-
-    leo_EndDrawing();
-}
-
-static void demo_render_ui(leo_GameContext *ctx)
-{
-    ShapesState *state = (ShapesState *)ctx->user_data;
     
+    // UI overlay (rendered in screen space)
     leo_DrawFPS(20, 32);
     
     // Instructions
