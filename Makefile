@@ -1,4 +1,4 @@
-.PHONY: build run clean web
+.PHONY: build run clean web fmt
 
 build:
 	cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug
@@ -15,6 +15,9 @@ ifeq ($(shell uname),Darwin)
 else
 	build/leo-engine-showcase
 endif
+
+fmt:
+	clang-format -i src/*.c src/*.h
 
 clean:
 	rm -rf build

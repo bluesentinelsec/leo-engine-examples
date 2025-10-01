@@ -9,9 +9,9 @@
 #include "win_dll_dirs.h"
 
 #if defined(_WIN32)
-#include <windows.h>
 #include <fcntl.h>
 #include <io.h>
+#include <windows.h>
 #endif
 
 static void print_help(const char *program_name)
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 {
 #ifdef _WIN32
     leo_init_windows_dll_search();
-        // Tell Windows console to use UTF-8
+    // Tell Windows console to use UTF-8
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
@@ -155,8 +155,7 @@ int main(int argc, char *argv[])
 // -------------------------
 // WinMain shim for GUI builds
 // -------------------------
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-                     LPSTR lpCmdLine, int nCmdShow)
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     (void)hInstance;
     (void)hPrevInstance;
